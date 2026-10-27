@@ -2,16 +2,15 @@ import { createOpencodeClient } from '@opencode-ai/sdk/v2'
 import type { OpencodeClient } from '@opencode-ai/sdk/v2'
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
-import { randomBytes } from 'node:crypto'
 
 type Emit = (event: unknown) => void
 
 let client: OpencodeClient | undefined
 let baseUrl = ''
 let ready: Promise<void> | undefined
-let password = randomBytes(16).toString('hex')
+let password = ''
 let useAuth = true
-const auth = () => (useAuth ? `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}` : '')
+const auth = () => (useAuth && password ? `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}` : '')
 let proc: ChildProcess | undefined
 let sessionId: string | undefined
 
@@ -64,13 +63,12 @@ async function launchOpencode(emit: Emit) {
   // shell: true pour trouver `opencode.cmd` sous Windows
   proc = spawn('opencode', ['serve', '--hostname=127.0.0.1', `--port=${port}`], {
     shell: true,
-    windowsHide: true,
-    env: { ...process.env, OPENCODE_SERVER_USERNAME: 'opencode', OPENCODE_SERVER_PASSWORD: password }
+    windowsHide: true
   })
   const onData = (d: Buffer) => {
     output = (output + d).slice(-2000)
     // opencode 2.x affiche le mot de passe réellement utilisé au lancement.
-    const m = output.match(/server password\W+(\S+)/i)
+    const m = output.replace(/\x1b\[[0-9;]*m/g, '').match(/server password\W+(\S+)/i)
     if (m) password = m[1]
   }
   proc.stdout?.on('data', onData)
