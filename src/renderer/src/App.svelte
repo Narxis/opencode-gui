@@ -14,7 +14,9 @@
 
   function upsert(messageID: string, part: Part) {
     touch(messageID)
-    const list = (parts[messageID] ??= [])
+    // Relire parts[...] après ??= : sinon on pousse dans le tableau brut, sans réactivité.
+    parts[messageID] ??= []
+    const list = parts[messageID]
     const i = list.findIndex((x) => x.id === part.id)
     if (i >= 0) list[i] = { ...list[i], ...part }
     else list.push(part)
@@ -40,7 +42,7 @@
         break
       case 'message.part.delta': {
         // Texte reçu au fil de l'eau : on l'ajoute à la partie correspondante.
-        const part = (parts[p.messageID] ??= []).find((x) => x.id === p.partID) as any
+        const part = parts[p.messageID]?.find((x) => x.id === p.partID) as any
         if (part) part[p.field] = (part[p.field] ?? '') + p.delta
         break
       }
