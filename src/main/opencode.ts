@@ -8,6 +8,7 @@ type Emit = (event: unknown) => void
 
 let client: OpencodeClient | undefined
 let baseUrl = ''
+let ready: Promise<void> | undefined
 let password = randomBytes(16).toString('hex')
 const auth = () => `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}`
 let proc: ChildProcess | undefined
@@ -44,7 +45,13 @@ async function waitReady(baseUrl: string, child: ChildProcess, log: () => string
 }
 
 /** Lance `opencode serve` et relaie les événements vers le renderer. */
-export async function startOpencode(emit: Emit) {
+export function startOpencode(emit: Emit): Promise<void> {
+  ready = launchOpencode(emit)
+  ready.catch((err) => console.error('[opencode]', err))
+  return ready
+}
+
+async function launchOpencode(emit: Emit) {
   const port = await freePort()
   baseUrl = `http://127.0.0.1:${port}`
   let output = ''
@@ -78,6 +85,8 @@ export async function startOpencode(emit: Emit) {
 }
 
 export async function sendPrompt(text: string) {
+  // Attend la fin du démarrage ; si celui-ci a échoué, on relaie sa vraie erreur.
+  await ready
   if (!client) throw new Error('opencode non démarré')
   if (!sessionId) {
     const res = await client.v2.session.create({})
