@@ -19,7 +19,7 @@ xvfb-run -a node .claude/skills/run-opencode-gui/drive.mjs "ss 01" "type dis bon
 ```
 Sans argument : `ss 01` + `text`. Captures dans `/tmp/shots/` (`SCREENSHOT_DIR`). **Regarder la capture** (Read sur le .png).
 
-Étapes : `ss [nom]`, `type <texte>` (remplit la zone de saisie), `press <touche>`, `click <css>`, `wait <secondes>`, `text` (innerText), `eval <js>`. Logs du process principal préfixés `[main]`.
+Étapes : `ss [nom]`, `type <texte>` (remplit la zone de saisie), `press <touche>`, `click <css>`, `wait <secondes>`, `text` (innerText), `eval <js>`, `size <largeur> <hauteur>` (redimensionne la fenêtre). Logs du process principal préfixés `[main]`.
 
 ## Pièges
 - npm n'a qu'opencode **1.19.x** ; l'app vise l'API 2.x et aucun fournisseur LLM n'est configuré en cloud : l'UI s'affiche, le chat reste sur « Réflexion… ». Pour tester le chat, faux serveur ou PC de Geoffrey.

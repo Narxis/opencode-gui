@@ -14,13 +14,14 @@ const log = (d) => String(d).split('\n').filter((l) => l && !l.includes('dbus'))
 app.process().stdout.on('data', log)
 app.process().stderr.on('data', log)
 await w.waitForTimeout(5000)
-const steps = { // ss [nom] | type <texte> | press <touche> | click <css> | wait <s> | text | eval <js>
+const steps = { // ss [nom] | type <texte> | press <touche> | click <css> | wait <s> | text | eval <js> | size <l> <h>
   ss: (a) => w.screenshot({ path: `${shots}/${a || Date.now()}.png` }).then(() => console.log(`ss: ${shots}/${a}.png`)),
   type: (a) => w.locator('textarea').fill(a),
   press: (a) => w.keyboard.press(a),
   click: (a) => w.click(a),
   wait: (a) => w.waitForTimeout(+a * 1000),
   text: () => w.evaluate(() => document.body.innerText).then(console.log),
+  size: (a) => app.evaluate(({ BrowserWindow }, [l, h]) => BrowserWindow.getAllWindows()[0].setSize(l, h), a.split(' ').map(Number)).then(() => w.waitForTimeout(500)),
   eval: (a) => w.evaluate(a).then((r) => console.log(JSON.stringify(r)))
 }
 for (const s of process.argv.slice(2).length ? process.argv.slice(2) : ['ss 01', 'text']) {

@@ -9,6 +9,7 @@
   let error = $state('')
   let sessions = $state<any[]>([])
   let current = $state<string>()
+  let side = $state(innerWidth >= 768) // barre latérale visible
   // Fils regroupés par dossier de projet.
   const projects = $derived(Object.entries(Object.groupBy(sessions, (s) => s.location?.directory ?? '?')))
   const base = (dir: string) => dir.split(/[\\/]/).filter(Boolean).pop() ?? dir
@@ -159,8 +160,9 @@
   }
 </script>
 
-<main class="flex h-screen">
-  <aside class="flex w-64 flex-col gap-4 overflow-y-auto border-r border-line bg-panel p-3 text-sm">
+<main class="flex h-screen overflow-hidden">
+  {#if side}
+  <aside class="flex w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r border-line bg-panel p-3 text-sm">
     <button class="rounded-lg border border-line px-3 py-2 text-left hover:bg-line/40" onclick={() => open()}>+ Nouveau fil</button>
     {#each projects as [dir, list] (dir)}
       <div>
@@ -171,9 +173,11 @@
       </div>
     {/each}
   </aside>
-  <section class="flex flex-1 flex-col">
+  {/if}
+  <section class="relative flex min-w-0 flex-1 flex-col">
+    <button class="absolute left-2 top-2 z-10 rounded-lg px-2 py-1 text-muted hover:bg-line/40 hover:text-fg" aria-label="Barre latérale" onclick={() => (side = !side)}>☰</button>
     <div class="flex-1 overflow-y-auto">
-      <div class="mx-auto max-w-3xl space-y-6 px-6 py-8">
+      <div class="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
         {#if !order.length}
           <p class="pt-32 text-center text-2xl text-muted">Que veux-tu faire ?</p>
         {/if}
@@ -206,7 +210,7 @@
         {#if error}<p class="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-500">{error}</p>{/if}
       </div>
     </div>
-    <form class="mx-auto mb-4 flex w-full max-w-3xl items-end gap-2 rounded-2xl border border-line bg-panel p-2 shadow-sm focus-within:border-muted" onsubmit={(e) => { e.preventDefault(); send() }}>
+    <form class="mx-auto mb-4 flex w-[calc(100%-2rem)] max-w-3xl items-end gap-2 rounded-2xl border border-line bg-panel p-2 shadow-sm focus-within:border-muted" onsubmit={(e) => { e.preventDefault(); send() }}>
       <textarea rows="1" class="field-sizing-content max-h-60 flex-1 resize-none bg-transparent px-2 py-1.5 outline-none placeholder:text-muted" placeholder="Écris à opencode…  (Maj+Entrée = nouvelle ligne)" bind:value={input} onkeydown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}></textarea>
       <button class="size-9 rounded-xl bg-accent text-lg text-white disabled:opacity-40" disabled={busy || !input.trim()} aria-label="Envoyer">↑</button>
     </form>
