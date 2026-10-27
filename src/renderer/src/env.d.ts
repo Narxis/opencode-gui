@@ -7,7 +7,9 @@ declare module "*.svelte" {
 
 interface Window {
   oc: {
-    send(text: string): Promise<void>
+    send(text: string): Promise<string>
+    sessions(): Promise<any[]>
+    open(id?: string): Promise<any[]>
     onEvent(cb: (event: any) => void): void
   }
 }
