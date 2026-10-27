@@ -38,10 +38,30 @@ Sources : types de `@opencode-ai/sdk` 1.19.4 (`dist/v2`), mémoire du projet (op
 |---|---|---|
 | 1. Fils vivants | Routage des événements par session, état par fil, badge sur chaque fil de la barre latérale | Les fils existants affichent en cours / prêt / échec en direct, même ceux qu'on ne regarde pas |
 | 2. Attente utilisateur | Permissions et questions dans la vue du fil + notification Windows | « Fil X attend ta réponse », boutons Autoriser / Refuser / réponse |
+| 2 bis. Panneau « Fils de discussion » | Panneau groupé par état (voir §5) | Le même panneau que dans Claude : en attente, en cours, inactif, résolu |
 | 3. Chat de projet + coordinateur | Projet = dossier, session racine avec agent `coordinateur`, MCP `start_thread` / `message_thread` / `list_threads` | On demande une tâche, le coordinateur répond court et une carte de fil apparaît dans le chat |
 | 4. Retour au coordinateur | Fin ou blocage d'un fil → message au chat du coordinateur ; fils en parallèle | Le coordinateur annonce « fil X prêt » et enchaîne sans qu'on relance |
 | 5. Vue d'un fil complète | Checklist (`todo.updated`), diffs (`session.diff`), bouton stop, « marquer terminé » | La vue fil ressemble à celle de Claude Code |
 | 6. Extras | Plusieurs projets, mémoire (`AGENTS.md`) en lecture, liste de PR via `gh`, installeur Windows | Produit complet à installer |
+
+## 5. Panneau « Fils de discussion » (capture Claude de Geoffrey)
+
+| Élément | Source opencode | Faisable ? |
+|---|---|---|
+| Section « En attente de votre action · N », zone pointillée « Décisions, révisions et demandes d'autorisation » si vide | état `wait` (permission / question) | Oui |
+| Section « En cours · N », spinner | état `busy` | Oui |
+| Section « Inactif · N », cercle pointillé | session ni busy ni wait ni archivée | Oui |
+| Section « Résolu · N », repliée par défaut | `time.archived` de la session ⚠ (route d'archivage à vérifier) | Oui, sinon drapeau stocké par l'app |
+| Sections repliables (flèche) | UI seule | Oui |
+| Titre en gras, heure relative à droite (« maintenant », « 1h ») | `title`, `time.updated` | Oui |
+| Pastille checklist « 5/6 » avec spinner | dernier `todo.updated` (terminés / total) ; à recharger à l'ouverture ⚠ | Oui |
+| Pastille PR verte « #17 » (ouverte), violette (mergée) | Rien de natif : repérer les liens `…/pull/N` dans les sorties d'outils, état via `gh pr view` | Partiel, phase 6 |
+| Compteur « ⧉ 1 » (fichiers livrés ?) | Pas d'équivalent clair | À préciser avec Geoffrey |
+| Icône rouge à côté du titre (machine déconnectée ?) | Sans objet en local | Non |
+| Recherche | filtre sur les titres côté app | Oui |
+| Filtre, agrandir, fermer | UI seule (options du filtre inconnues) | Oui, filtre à préciser |
+
+Manque côté app : rien de nouveau hors PR ; tout vient de l'état des fils (phase 1) et de `todo.updated`.
 
 ## 4. Décisions (Geoffrey, 2026-10-27)
 
