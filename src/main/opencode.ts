@@ -10,7 +10,8 @@ let client: OpencodeClient | undefined
 let baseUrl = ''
 let ready: Promise<void> | undefined
 let password = randomBytes(16).toString('hex')
-const auth = () => `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}`
+let useAuth = true
+const auth = () => (useAuth ? `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}` : '')
 let proc: ChildProcess | undefined
 let sessionId: string | undefined
 
@@ -31,17 +32,22 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 async function waitReady(baseUrl: string, child: ChildProcess, log: () => string) {
   let exited = false
   child.once('exit', () => (exited = true))
-  for (let i = 0; i < 120; i++) {
+  let last = 'aucune réponse'
+  for (let i = 0; i < 60; i++) {
     if (exited) throw new Error(`opencode s'est arrêté au démarrage : ${log().trim()}`)
     try {
-      const res = await fetch(`${baseUrl}/api/health`, { headers: { Authorization: auth() } })
-      if (res.ok) return
-      await sleep(500)
-    } catch {
-      await sleep(500)
+      for (const withAuth of [useAuth, !useAuth]) {
+        useAuth = withAuth
+        const res = await fetch(`${baseUrl}/api/health`, { headers: { Authorization: auth() } })
+        if (res.ok) return
+        last = `${res.status} ${(await res.text()).slice(0, 120)}`
+      }
+    } catch (err) {
+      last = String(err)
     }
+    await sleep(500)
   }
-  throw new Error(`opencode ne répond pas après 60 s : ${log().trim()}`)
+  throw new Error(`opencode ne répond pas après 30 s (/api/health → ${last}) : ${log().trim()}`)
 }
 
 /** Lance `opencode serve` et relaie les événements vers le renderer. */
