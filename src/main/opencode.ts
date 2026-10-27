@@ -6,6 +6,7 @@ import { createServer } from 'node:net'
 type Emit = (event: unknown) => void
 
 let client: OpencodeClient | undefined
+let baseUrl = ''
 let proc: ChildProcess | undefined
 let sessionId: string | undefined
 
@@ -41,7 +42,7 @@ async function waitReady(baseUrl: string, child: ChildProcess, log: () => string
 /** Lance `opencode serve` et relaie les événements vers le renderer. */
 export async function startOpencode(emit: Emit) {
   const port = await freePort()
-  const baseUrl = `http://127.0.0.1:${port}`
+  baseUrl = `http://127.0.0.1:${port}`
   let output = ''
   // shell: true pour trouver `opencode.cmd` sous Windows
   proc = spawn('opencode', ['serve', '--hostname=127.0.0.1', `--port=${port}`], {
@@ -65,12 +66,36 @@ export async function startOpencode(emit: Emit) {
   })().catch((err) => emit({ type: 'gui.error', properties: { message: String(err) } }))
 }
 
+/** Crée une session par HTTP direct, pour avoir le détail exact en cas d'erreur. */
+async function createSession(): Promise<string> {
+  const res = await fetch(`${baseUrl}/session`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}'
+  })
+  const body = await res.text()
+  if (res.ok) {
+    try {
+      const id = JSON.parse(body)?.id
+      if (typeof id === 'string') return id
+    } catch {
+      /* corps non JSON : détaillé ci-dessous */
+    }
+  }
+  let routes = ''
+  try {
+    const doc = await (await fetch(`${baseUrl}/doc`)).json()
+    routes = Object.keys(doc.paths ?? {}).filter((k) => /session/i.test(k)).slice(0, 25).join(', ')
+  } catch {
+    /* pas de /doc */
+  }
+  throw new Error(`POST /session → ${res.status} ${body.slice(0, 300)} | routes session : ${routes || 'inconnues'}`)
+}
+
 export async function sendPrompt(text: string) {
   if (!client) throw new Error('opencode non démarré')
   if (!sessionId) {
-    const res = await client.session.create({})
-    if (!res.data) throw new Error(`création de session impossible : ${JSON.stringify(res.error)}`)
-    sessionId = res.data.id
+    sessionId = await createSession()
   }
   const res = await client.session.promptAsync({
     sessionID: sessionId,
