@@ -81,7 +81,8 @@ Correspondance : un dossier de fichiers partagé par projet (`<projet>/.opencode
 | Carte de fil dans le chat : point d'état, titre en gras, résumé en gris tronqué | état du fil (phase 1), `title`, dernier texte du fil | Oui | 3 |
 | Lien inline vers un fil dans la réponse du coordinateur, précédé de l'icône d'état | le coordinateur écrit `[titre](thread:<id>)`, l'app le rend en lien | Oui | 4 |
 | Carte au survol du lien : état (« Nécessite une saisie », icône ⚠ ambre), « N réponses · maintenant », titre en gras, « N fusionné(s) » | état, nombre de messages (`/api/session/:id/message`), `time.updated` ; PR fusionnées comme en §4 | Oui, sauf le nombre de PR (phase 6) | 4 |
-| Barre d'actions au survol d'un message : réaction, copier, « … » | réaction stockée par l'app ; copier = presse-papiers | Oui ; contenu du « … » à préciser | 5 |
+| Barre d'actions au survol d'un message : ajouter une réaction, copier, « … » | réactions stockées par l'app ; copier = presse-papiers | Oui | 5 |
+| Menu « … » : rangée de 6 réactions rapides (❤️ 👍 💪 🎉 👀 🚀), « Répondre » (cite le message dans la saisie), « Copier le message » (texte), « Copier le message au format Markdown » | UI seule ; texte brut tiré du markdown rendu | Oui | 5 |
 | Saisie : menu « + » → « Ajouter des fichiers ou des photos » | boîte de dialogue Electron + partie fichier dans le prompt ⚠ (format v2 à vérifier) | Oui | 5 |
 | Menu « + » → « Commandes slash » | `/api/command` (commandes d'opencode) | Oui | 5 |
 | Menu « + » → « Travailler en local » › liste des dossiers (nom + chemin complet) | dossier de travail de la session (`location`) ; dossiers déjà connus via les sessions | Oui | 6 (avec plusieurs projets) |
