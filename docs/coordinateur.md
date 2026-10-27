@@ -42,7 +42,7 @@ Sources : types de `@opencode-ai/sdk` 1.19.4 (`dist/v2`), mémoire du projet (op
 | 3. Chat de projet + coordinateur | Projet = dossier, session racine avec agent `coordinateur`, MCP `start_thread` / `message_thread` / `list_threads` | On demande une tâche, le coordinateur répond court et une carte de fil apparaît dans le chat |
 | 4. Retour au coordinateur | Fin ou blocage d'un fil → message au chat du coordinateur ; fils en parallèle | Le coordinateur annonce « fil X prêt » et enchaîne sans qu'on relance |
 | 5. Vue d'un fil complète | Checklist (`todo.updated`), diffs (`session.diff`), bouton stop, « marquer terminé » | La vue fil ressemble à celle de Claude Code |
-| 6. Extras | Panneau Fichiers avec filtre Type, plusieurs projets, mémoire (`AGENTS.md`) en lecture, liste de PR via `gh`, installeur Windows | Produit complet à installer |
+| 6. Extras | Bibliothèque (fichiers du projet, filtre Type, vues), plusieurs projets, mémoire (`AGENTS.md`) en lecture, liste de PR via `gh`, installeur Windows | Produit complet à installer |
 
 ## 4. Panneau « Fils de discussion » (capture Claude de Geoffrey)
 
@@ -65,9 +65,13 @@ Sources : types de `@opencode-ai/sdk` 1.19.4 (`dist/v2`), mémoire du projet (op
 
 Manque côté app : rien de nouveau hors PR ; tout vient de l'état des fils (phase 1) et de `todo.updated`.
 
-### Panneau « Fichiers » du projet (bibliothèque)
+### Panneau « Bibliothèque » du projet
 
-Liste des fichiers livrés par tous les fils du projet, avec un menu « Type » : Tous les types (défaut, coche bleue), Images, Documents, Artéfacts, Liens, chacun avec son nombre (grisé si 0). Source : fichiers créés/modifiés par les fils (outils `write` / `edit`), classés par extension (images : png, jpg… ; documents : md, pdf, docx… ; artéfacts : html) ; liens : URL trouvées dans les réponses des fils. Faisable, en phase 6.
+- En-tête : « Bibliothèque », recherche, agrandir, fermer.
+- Barre : menu « Type » (Tous les types par défaut avec coche bleue, Images, Documents, Artéfacts, Liens, chacun avec son nombre, grisé si 0) ; à droite trois vues (la 1re icône est à préciser, grille, liste), bouton « + Ajouter ».
+- Vue liste : colonnes Nom (triable ▲), Propriétaire (pastille initiale + nom), Date de modification (« 27 oct. 2026, 20:28 »), Taille (« 5 ko », « — » pour un dossier), Genre (Dossier, Dossier lié, MD, HTML…). Dossiers dépliables (›). Le dossier du projet apparaît comme « Dossier lié » avec « Cet ordinateur · Par défaut ».
+
+Correspondance : un dossier de fichiers partagé par projet (`<projet>/.opencode-gui/files/`, hors git) dans lequel les fils déposent leurs livrables ; le dossier du projet est le « dossier lié ». Le propriétaire est Geoffrey pour un fichier ajouté à la main, et le nom du fil pour un fichier créé par un fil. Taille et date viennent du disque (`fs.stat`, côté main), le genre de l'extension. Pour les Liens, on prend les URL trouvées dans les réponses des fils. « Ajouter » ouvre la boîte de dialogue de fichiers d'Electron et copie le fichier dans le dossier. Tout est faisable, en phase 6.
 
 ## 5. Décisions (Geoffrey, 2026-10-27)
 
