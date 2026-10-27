@@ -35,16 +35,16 @@ async function waitReady(baseUrl: string, child: ChildProcess, log: () => string
   for (let i = 0; i < 60; i++) {
     if (exited) throw new Error(`opencode s'est arrêté au démarrage : ${log().trim()}`)
     try {
-      // Prêt = le serveur répond et accepte notre mot de passe (le statut de la route importe peu).
-      const res = await fetch(`${baseUrl}/api/health`, { headers: { Authorization: auth() } })
-      if (password && res.status !== 401 && res.status < 500) return
+      // Pas de /api/health en 2.2 : on teste une vraie route, avec le mot de passe.
+      const res = await fetch(`${baseUrl}/api/session`, { headers: { Authorization: auth() } })
+      if (password && res.ok) return
       last = `${res.status} ${(await res.text()).slice(0, 80)}`
     } catch (err) {
       last = String(err)
     }
     await sleep(500)
   }
-  throw new Error(`opencode ne répond pas après 30 s (/api/health → ${last}) : ${log().trim()}`)
+  throw new Error(`opencode ne répond pas après 30 s (GET /api/session → ${last}) : ${log().trim()}`)
 }
 
 /** Lance `opencode serve` et relaie les événements vers le renderer. */
