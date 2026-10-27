@@ -2,7 +2,6 @@
 
 :root {
   --bg: #faf9f5; --panel: #f0eee6; --line: #e3e0d6; --fg: #1f1e1c; --muted: #6f6c64; --accent: #c96442;
-  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {

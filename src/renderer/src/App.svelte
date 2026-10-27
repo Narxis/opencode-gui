@@ -32,13 +32,9 @@
     }
   })
 
-  // découpe ```lang\ncode``` : [texte, lang, code, texte, …]
-  const chunks = (t = '') => t.split(/```(\w*)\n?([\s\S]*?)```/)
+  // ```code``` → [texte, code, texte, …]
+  const chunks = (t = '') => t.split(/```\w*\n?([\s\S]*?)```/)
   const dot: Record<string, string> = { completed: 'bg-green-500', error: 'bg-red-500', running: 'bg-amber-400 animate-pulse' }
-
-  function key(e: KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
-  }
 
   async function send() {
     const text = input.trim()
@@ -68,9 +64,9 @@
             {#each parts[id] ?? [] as part (part.id)}
               {#if part.type === 'text'}
                 {#each chunks(part.text) as c, i}
-                  {#if i % 3 === 0}
+                  {#if i % 2 === 0}
                     {#if c.trim()}<p class="whitespace-pre-wrap">{c.trim()}</p>{/if}
-                  {:else if i % 3 === 2}
+                  {:else}
                     <pre class="overflow-x-auto rounded-lg border border-line bg-panel p-3 font-mono text-[13px]">{c}</pre>
                   {/if}
                 {/each}
@@ -79,7 +75,7 @@
                   <summary class="flex cursor-pointer list-none items-center gap-2 px-3 py-1.5 text-muted hover:text-fg">
                     <span class="size-2 rounded-full {dot[part.state?.status] ?? 'bg-line'}"></span>
                     <span class="font-mono text-fg">{part.tool}</span>
-                    <span class="truncate">{part.state?.title ?? ''}</span>
+                    <span class="truncate">{part.state?.title}</span>
                     <span class="ml-auto transition group-open:rotate-90">›</span>
                   </summary>
                   <pre class="max-h-80 overflow-auto border-t border-line p-3 font-mono text-xs text-muted">{JSON.stringify(part.state?.input ?? {}, null, 2)}{part.state?.output ? '\n\n' + part.state.output : ''}</pre>
@@ -93,7 +89,7 @@
       </div>
     </div>
     <form class="mx-auto mb-4 flex w-full max-w-3xl items-end gap-2 rounded-2xl border border-line bg-panel p-2 shadow-sm focus-within:border-muted" onsubmit={(e) => { e.preventDefault(); send() }}>
-      <textarea rows="1" class="field-sizing-content max-h-60 flex-1 resize-none bg-transparent px-2 py-1.5 outline-none placeholder:text-muted" placeholder="Écris à opencode…  (Maj+Entrée = nouvelle ligne)" bind:value={input} onkeydown={key}></textarea>
+      <textarea rows="1" class="field-sizing-content max-h-60 flex-1 resize-none bg-transparent px-2 py-1.5 outline-none placeholder:text-muted" placeholder="Écris à opencode…  (Maj+Entrée = nouvelle ligne)" bind:value={input} onkeydown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}></textarea>
       <button class="size-9 rounded-xl bg-accent text-lg text-white disabled:opacity-40" disabled={busy || !input.trim()} aria-label="Envoyer">↑</button>
     </form>
   </section>
