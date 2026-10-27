@@ -114,7 +114,19 @@ export async function listSessions() {
 export async function openSession(id?: string) {
   await ready
   sessionId = id
-  return id ? (await api(`/api/session/${id}/message?order=asc&limit=200`)).data : []
+  return id ? messages(id) : []
+}
+
+/** Historique d'un fil, sans en changer (panneau Fils de discussion). */
+export async function messages(id: string) {
+  await ready
+  return (await api(`/api/session/${id}/message?order=asc&limit=200`)).data
+}
+
+/** Fils en cours d'exécution : { [id]: { type: 'running' } }. */
+export async function activeSessions() {
+  await ready
+  return (await api('/api/session/active')).data
 }
 
 const post = (path: string, body: unknown) => api(path, 'POST', body)

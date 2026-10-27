@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'node:path'
-import { listSessions, openSession, sendPrompt, startOpencode, stopOpencode } from './opencode'
+import { listSessions, openSession, messages, activeSessions, sendPrompt, startOpencode, stopOpencode } from './opencode'
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -30,6 +30,8 @@ function createWindow() {
 ipcMain.handle('oc:send', (_e, text: string) => sendPrompt(text))
 ipcMain.handle('oc:sessions', () => listSessions())
 ipcMain.handle('oc:open', (_e, id?: string) => openSession(id))
+ipcMain.handle('oc:messages', (_e, id: string) => messages(id))
+ipcMain.handle('oc:active', () => activeSessions())
 
 app.whenReady().then(createWindow)
 app.on('window-all-closed', () => app.quit())
