@@ -21,6 +21,8 @@
   }
 
   let lastAssistant = ''
+  const pending: string[] = [] // messages envoyés, affichés avant l'écho d'opencode
+  let sent = 0
   const errText = (err: any) => err?.data?.message ?? err?.message ?? JSON.stringify(err)
 
   window.oc.onEvent((e) => {
@@ -43,6 +45,12 @@
       // Événements d'opencode 2.2 (observés sur /api/event)
       case 'session.inbox.enqueued':
         if (p.item?.type === 'user') {
+          // Déjà affiché à l'envoi : on ne le duplique pas.
+          const i = pending.indexOf(p.item.payload?.text)
+          if (i >= 0) {
+            pending.splice(i, 1)
+            break
+          }
           roles[p.inboxID] = 'user'
           upsert(p.inboxID, { id: p.inboxID + ':text', messageID: p.inboxID, type: 'text', text: p.item.payload?.text ?? '' })
         }
@@ -106,6 +114,10 @@
     if (!text || busy) return
     input = ''
     busy = true
+    const id = `local:${sent++}`
+    roles[id] = 'user'
+    upsert(id, { id: id + ':text', messageID: id, type: 'text', text })
+    pending.push(text)
     error = ''
     try {
       await window.oc.send(text)
