@@ -15,6 +15,6 @@
   --font-sans: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Cascadia Code', Consolas, ui-monospace, monospace;
 }
-body { @apply bg-bg font-sans text-[15px] leading-relaxed text-fg antialiased; }
+body { @apply bg-bg font-sans text-[15px] leading-relaxed text-fg antialiased; overflow-wrap: anywhere; }
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-thumb { @apply rounded-full border-2 border-transparent bg-line bg-clip-padding; }

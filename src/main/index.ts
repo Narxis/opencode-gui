@@ -6,6 +6,8 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1100,
     height: 760,
+    minWidth: 480,
+    minHeight: 400,
     backgroundColor: '#1f1e1d',
     webPreferences: { preload: join(import.meta.dirname, '../preload/index.cjs') }
   })
