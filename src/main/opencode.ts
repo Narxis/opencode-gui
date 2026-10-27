@@ -9,15 +9,8 @@ let client: OpencodeClient | undefined
 let baseUrl = ''
 let ready: Promise<void> | undefined
 let password = ''
-let scheme = 0
-// Schémas d'authentification essayés tour à tour (le format exact varie selon la version).
-const schemes = [
-  () => `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}`,
-  () => `Basic ${Buffer.from(`:${password}`).toString('base64')}`,
-  () => `Bearer ${password}`,
-  () => ''
-]
-const auth = () => (password ? schemes[scheme]() : '')
+// opencode 2.x : Basic `opencode:<mot de passe>`, mot de passe affiché au démarrage.
+const auth = () => (password ? `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}` : '')
 let proc: ChildProcess | undefined
 let sessionId: string | undefined
 
@@ -42,14 +35,10 @@ async function waitReady(baseUrl: string, child: ChildProcess, log: () => string
   for (let i = 0; i < 60; i++) {
     if (exited) throw new Error(`opencode s'est arrêté au démarrage : ${log().trim()}`)
     try {
-      const seen: string[] = []
-      for (let k = 0; k < schemes.length; k++) {
-        scheme = (scheme + (k ? 1 : 0)) % schemes.length
-        const res = await fetch(`${baseUrl}/api/health`, { headers: { Authorization: auth() } })
-        if (res.ok) return
-        seen.push(`schéma ${scheme} → ${res.status} ${(await res.text()).slice(0, 80)}`)
-        last = seen.join(' ; ')
-      }
+      // Prêt = le serveur répond et accepte notre mot de passe (le statut de la route importe peu).
+      const res = await fetch(`${baseUrl}/api/health`, { headers: { Authorization: auth() } })
+      if (password && res.status !== 401 && res.status < 500) return
+      last = `${res.status} ${(await res.text()).slice(0, 80)}`
     } catch (err) {
       last = String(err)
     }
