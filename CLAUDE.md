@@ -6,7 +6,7 @@ Stack : Electron + electron-vite + Svelte 5 + TS + Tailwind 4.
 - `src/main/opencode.ts` : lance `opencode serve`, client `@opencode-ai/sdk/v2` (routes `/api/`, auth Basic `opencode:<password>` lu dans « server password … »).
 - `src/preload/` : pont IPC `window.oc`. `src/renderer/src/App.svelte` : UI.
 
-Commandes : `npm run dev`, `npm run check` (avant chaque PR), `npm run build`, `npm run dist`.
+Branche principale : `prod`. Commandes : `npm run dev`, `npm run check` (avant chaque PR), `npm run build`, `npm run dist`.
 
 Règles :
 - Plus petite modif complète, pas d'abstraction ni de dépendance superflue.
