@@ -4,6 +4,9 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   main: {},
-  preload: {},
+  // Le preload sandboxé doit être en CommonJS.
+  preload: {
+    build: { rollupOptions: { output: { format: 'cjs', entryFileNames: '[name].cjs' } } }
+  },
   renderer: { plugins: [svelte(), tailwindcss()] }
 })
