@@ -1,11 +1,12 @@
-import { createOpencode } from '@opencode-ai/sdk'
+import { createOpencodeClient } from '@opencode-ai/sdk'
 import type { OpencodeClient } from '@opencode-ai/sdk'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
 
 type Emit = (event: unknown) => void
 
 let client: OpencodeClient | undefined
-let close: (() => void) | undefined
+let proc: ChildProcess | undefined
 let sessionId: string | undefined
 
 function freePort(): Promise<number> {
@@ -19,11 +20,45 @@ function freePort(): Promise<number> {
   })
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** Attend que le serveur réponde (quel que soit le format de sa sortie). */
+async function waitReady(baseUrl: string, child: ChildProcess, log: () => string) {
+  let exited = false
+  child.once('exit', () => (exited = true))
+  for (let i = 0; i < 120; i++) {
+    if (exited) throw new Error(`opencode s'est arrêté au démarrage : ${log().trim()}`)
+    try {
+      await fetch(`${baseUrl}/global/health`)
+      return
+    } catch {
+      await sleep(500)
+    }
+  }
+  throw new Error(`opencode ne répond pas après 60 s : ${log().trim()}`)
+}
+
 /** Lance `opencode serve` et relaie les événements vers le renderer. */
 export async function startOpencode(emit: Emit) {
-  const oc = await createOpencode({ port: await freePort() })
-  client = oc.client
-  close = oc.server.close
+  const port = await freePort()
+  const baseUrl = `http://127.0.0.1:${port}`
+  let output = ''
+  // shell: true pour trouver `opencode.cmd` sous Windows
+  proc = spawn('opencode', ['serve', '--hostname=127.0.0.1', `--port=${port}`], {
+    shell: true,
+    windowsHide: true
+  })
+  proc.stdout?.on('data', (d) => (output = (output + d).slice(-2000)))
+  proc.stderr?.on('data', (d) => (output = (output + d).slice(-2000)))
+  proc.once('error', (err) => emit({ type: 'gui.error', properties: { message: String(err) } }))
+  await waitReady(baseUrl, proc, () => output)
+  const child = proc
+  // Signale un arrêt d'opencode après le démarrage (sauf fermeture volontaire de l'app).
+  child.once('exit', (code) => {
+    if (proc === child) emit({ type: 'gui.error', properties: { message: `opencode s'est arrêté (code ${code})` } })
+  })
+
+  client = createOpencodeClient({ baseUrl })
   const { stream } = await client.event.subscribe()
   void (async () => {
     for await (const event of stream) emit(event)
@@ -44,5 +79,10 @@ export async function sendPrompt(text: string) {
 }
 
 export function stopOpencode() {
-  close?.()
+  const child = proc
+  proc = undefined
+  if (!child?.pid) return
+  // Sous Windows, shell: true impose de tuer tout l'arbre de processus.
+  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'])
+  else child.kill()
 }
