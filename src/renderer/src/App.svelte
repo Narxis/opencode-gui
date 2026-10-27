@@ -32,6 +32,14 @@
     }
   })
 
+  // découpe ```lang\ncode``` : [texte, lang, code, texte, …]
+  const chunks = (t = '') => t.split(/```(\w*)\n?([\s\S]*?)```/)
+  const dot: Record<string, string> = { completed: 'bg-green-500', error: 'bg-red-500', running: 'bg-amber-400 animate-pulse' }
+
+  function key(e: KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+  }
+
   async function send() {
     const text = input.trim()
     if (!text || busy) return
@@ -47,29 +55,46 @@
   }
 </script>
 
-<main class="flex h-screen bg-stone-900 text-stone-100">
-  <aside class="w-64 border-r border-stone-700 p-4">Projets</aside>
+<main class="flex h-screen">
+  <aside class="w-60 border-r border-line bg-panel p-4 text-sm text-muted">Projets</aside>
   <section class="flex flex-1 flex-col">
-    <div class="flex-1 space-y-4 overflow-y-auto p-6">
-      {#each order as id (id)}
-        <div class={roles[id] === 'user' ? 'ml-auto max-w-[80%] rounded-lg bg-stone-800 p-3' : 'max-w-[90%]'}>
-          {#each parts[id] ?? [] as part (part.id)}
-            {#if part.type === 'text'}
-              <p class="whitespace-pre-wrap">{part.text}</p>
-            {:else if part.type === 'tool'}
-              <details class="my-1 rounded border border-stone-700 p-2 text-sm text-stone-400">
-                <summary>{part.tool} · {part.state?.status}</summary>
-                <pre class="overflow-x-auto">{JSON.stringify(part.state?.input ?? {}, null, 2)}</pre>
-              </details>
-            {/if}
-          {/each}
-        </div>
-      {/each}
-      {#if error}<p class="text-red-400">{error}</p>{/if}
+    <div class="flex-1 overflow-y-auto">
+      <div class="mx-auto max-w-3xl space-y-6 px-6 py-8">
+        {#if !order.length}
+          <p class="pt-32 text-center text-2xl text-muted">Que veux-tu faire ?</p>
+        {/if}
+        {#each order as id (id)}
+          <div class={roles[id] === 'user' ? 'ml-auto w-fit max-w-[80%] rounded-2xl bg-panel px-4 py-2.5' : 'space-y-2'}>
+            {#each parts[id] ?? [] as part (part.id)}
+              {#if part.type === 'text'}
+                {#each chunks(part.text) as c, i}
+                  {#if i % 3 === 0}
+                    {#if c.trim()}<p class="whitespace-pre-wrap">{c.trim()}</p>{/if}
+                  {:else if i % 3 === 2}
+                    <pre class="overflow-x-auto rounded-lg border border-line bg-panel p-3 font-mono text-[13px]">{c}</pre>
+                  {/if}
+                {/each}
+              {:else if part.type === 'tool'}
+                <details class="group rounded-lg border border-line text-sm">
+                  <summary class="flex cursor-pointer list-none items-center gap-2 px-3 py-1.5 text-muted hover:text-fg">
+                    <span class="size-2 rounded-full {dot[part.state?.status] ?? 'bg-line'}"></span>
+                    <span class="font-mono text-fg">{part.tool}</span>
+                    <span class="truncate">{part.state?.title ?? ''}</span>
+                    <span class="ml-auto transition group-open:rotate-90">›</span>
+                  </summary>
+                  <pre class="max-h-80 overflow-auto border-t border-line p-3 font-mono text-xs text-muted">{JSON.stringify(part.state?.input ?? {}, null, 2)}{part.state?.output ? '\n\n' + part.state.output : ''}</pre>
+                </details>
+              {/if}
+            {/each}
+          </div>
+        {/each}
+        {#if busy}<p class="animate-pulse text-accent">✻ <span class="text-muted">Réflexion…</span></p>{/if}
+        {#if error}<p class="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-500">{error}</p>{/if}
+      </div>
     </div>
-    <form class="flex gap-2 border-t border-stone-700 p-4" onsubmit={(e) => { e.preventDefault(); send() }}>
-      <input class="flex-1 rounded bg-stone-800 p-2 outline-none" placeholder="Écris à opencode…" bind:value={input} />
-      <button class="rounded bg-orange-600 px-4 disabled:opacity-50" disabled={busy}>Envoyer</button>
+    <form class="mx-auto mb-4 flex w-full max-w-3xl items-end gap-2 rounded-2xl border border-line bg-panel p-2 shadow-sm focus-within:border-muted" onsubmit={(e) => { e.preventDefault(); send() }}>
+      <textarea rows="1" class="field-sizing-content max-h-60 flex-1 resize-none bg-transparent px-2 py-1.5 outline-none placeholder:text-muted" placeholder="Écris à opencode…  (Maj+Entrée = nouvelle ligne)" bind:value={input} onkeydown={key}></textarea>
+      <button class="size-9 rounded-xl bg-accent text-lg text-white disabled:opacity-40" disabled={busy || !input.trim()} aria-label="Envoyer">↑</button>
     </form>
   </section>
 </main>
