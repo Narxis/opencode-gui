@@ -10,6 +10,8 @@ interface Window {
     send(text: string): Promise<string>
     sessions(): Promise<any[]>
     open(id?: string): Promise<any[]>
+    messages(id: string): Promise<any[]>
+    active(): Promise<Record<string, unknown>>
     onEvent(cb: (event: any) => void): void
   }
 }

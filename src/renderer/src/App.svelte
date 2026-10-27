@@ -1,6 +1,7 @@
 <script lang="ts">
   import { marked } from 'marked'
   import DOMPurify from 'dompurify'
+  import Threads from './Threads.svelte'
   type Part = { id: string; messageID: string; type: string; text?: string; tool?: string; state?: any }
 
   let roles = $state<Record<string, string>>({})
@@ -14,6 +15,7 @@
   // État de chaque fil, d'après les événements : busy, wait (attend l'utilisateur), done, error.
   let status = $state<Record<string, string>>({})
   let side = $state(innerWidth >= 768) // barre latérale visible
+  let threads = $state(false) // panneau « Fils de discussion »
   // Fils regroupés par dossier de projet.
   const projects = $derived(Object.entries(Object.groupBy(sessions, (s) => s.location?.directory ?? '?')))
   const base = (dir: string) => dir.split(/[\\/]/).filter(Boolean).pop() ?? dir
@@ -188,7 +190,7 @@
   }
 </script>
 
-<main class="flex h-screen overflow-hidden">
+<main class="relative flex h-screen overflow-hidden">
   {#if side}
   <aside class="flex w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r border-line bg-panel p-3 text-sm">
     <button class="rounded-lg border border-line px-3 py-2 text-left hover:bg-line/40" onclick={() => open()}>+ Nouveau fil</button>
@@ -207,6 +209,7 @@
   {/if}
   <section class="relative flex min-w-0 flex-1 flex-col">
     <button class="absolute left-2 top-2 z-10 rounded-lg px-2 py-1 text-muted hover:bg-line/40 hover:text-fg" aria-label="Barre latérale" onclick={() => (side = !side)}>☰</button>
+    {#if !threads}<button class="absolute right-2 top-2 z-10 rounded-lg px-2 py-1 text-sm text-muted hover:bg-line/40 hover:text-fg" onclick={() => (threads = true)}>Fils de discussion</button>{/if}
     <div class="flex-1 overflow-y-auto">
       <div class="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
         {#if !order.length}
@@ -241,4 +244,5 @@
       <button class="size-9 rounded-xl bg-accent text-lg text-white disabled:opacity-40" disabled={busy || !input.trim()} aria-label="Envoyer">↑</button>
     </form>
   </section>
+  <Threads {sessions} {status} visible={threads} onopen={open} onclose={() => (threads = false)} />
 </main>
