@@ -56,7 +56,8 @@ Sources : types de `@opencode-ai/sdk` 1.19.4 (`dist/v2`), mémoire du projet (op
 | Titre en gras, heure relative à droite (« maintenant », « 1h ») | `title`, `time.updated` | Oui |
 | Pastille checklist « 5/6 » avec spinner | dernier `todo.updated` (terminés / total) ; à recharger à l'ouverture ⚠ | Oui |
 | Pastille PR verte « #17 » (ouverte), violette (mergée) | Rien de natif : repérer les liens `…/pull/N` dans les sorties d'outils, état via `gh pr view` | Partiel, phase 6 |
-| Compteur « ⧉ 1 » (fichiers livrés ?) | Pas d'équivalent clair | À préciser avec Geoffrey |
+| Compteur « ⧉ N » = fichiers livrés par le fil ; survol = liste des noms | fichiers créés par les outils `write` / `edit` du fil (ou `session.diff`) | Oui |
+| Après le titre : « — dernier message » en gris | dernier texte de la session | Oui |
 | Icône rouge à côté du titre (machine déconnectée ?) | Sans objet en local | Non |
 | Recherche | filtre sur les titres côté app | Oui |
 | Filtre, agrandir, fermer | UI seule (options du filtre inconnues) | Oui, filtre à préciser |
