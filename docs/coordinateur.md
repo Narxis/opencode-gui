@@ -73,6 +73,20 @@ Manque côté app : rien de nouveau hors PR ; tout vient de l'état des fils (ph
 
 Correspondance : un dossier de fichiers partagé par projet (`<projet>/.opencode-gui/files/`, hors git) dans lequel les fils déposent leurs livrables ; le dossier du projet est le « dossier lié ». Le propriétaire est Geoffrey pour un fichier ajouté à la main, et le nom du fil pour un fichier créé par un fil. Taille et date viennent du disque (`fs.stat`, côté main), le genre de l'extension. Pour les Liens, on prend les URL trouvées dans les réponses des fils. « Ajouter » ouvre la boîte de dialogue de fichiers d'Electron et copie le fichier dans le dossier. Tout est faisable, en phase 6.
 
+### Chat de projet : détails (capture Claude de Geoffrey)
+
+| Élément | Source opencode | Faisable ? | Phase |
+|---|---|---|---|
+| Séparateur « Nouveau » (trait + mot en couleur d'accent) au-dessus des messages non lus | dernier message lu par session, stocké par l'app | Oui | 3 |
+| Carte de fil dans le chat : point d'état, titre en gras, résumé en gris tronqué | état du fil (phase 1), `title`, dernier texte du fil | Oui | 3 |
+| Lien inline vers un fil dans la réponse du coordinateur, précédé de l'icône d'état | le coordinateur écrit `[titre](thread:<id>)`, l'app le rend en lien | Oui | 4 |
+| Carte au survol du lien : état (« Nécessite une saisie », icône ⚠ ambre), « N réponses · maintenant », titre en gras, « N fusionné(s) » | état, nombre de messages (`/api/session/:id/message`), `time.updated` ; PR fusionnées comme en §4 | Oui, sauf le nombre de PR (phase 6) | 4 |
+| Barre d'actions au survol d'un message : réaction, copier, « … » | réaction stockée par l'app ; copier = presse-papiers | Oui ; contenu du « … » à préciser | 5 |
+| Saisie : « + » pour joindre un fichier | partie fichier dans le prompt ⚠ (format v2 à vérifier) | Oui | 5 |
+| Saisie : micro (dictée) avec menu ▾ | Electron n'a pas la reconnaissance vocale de Chrome ; il faudrait un modèle local (whisper) ou une API | Difficile, à décider | 6 |
+| Saisie : sélecteur de modèle (« Sonnet 5.5 ») | `/api/model`, `/api/session/:id/model` | Oui | 5 |
+| Saisie : spinner d'activité à droite, envoyer ↵ | état `busy` du fil ouvert | Oui | 3 |
+
 ## 5. Décisions (Geoffrey, 2026-10-27)
 
 1. **Modèle du coordinateur** : Sonnet 5.5 ; les fils gardent le modèle par défaut.
