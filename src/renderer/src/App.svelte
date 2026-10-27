@@ -163,9 +163,9 @@
   const md = (t = '') => DOMPurify.sanitize(marked.parse(t, { async: false, breaks: true }))
   const dot: Record<string, string> = { completed: 'bg-green-500', error: 'bg-red-500', running: 'bg-amber-400 animate-pulse' }
   const badge: Record<string, [string, string]> = {
-    busy: ['bg-amber-400 animate-pulse', 'En cours'],
-    wait: ['bg-blue-500 animate-pulse', 'Attend ta réponse'],
-    done: ['bg-green-500', 'Prêt'],
+    busy: ['bg-muted animate-pulse', 'En cours'],
+    wait: ['bg-amber-400', 'Attend ta réponse'],
+    done: ['bg-blue-500', 'Prêt'],
     error: ['bg-red-500', 'Échec']
   }
 
