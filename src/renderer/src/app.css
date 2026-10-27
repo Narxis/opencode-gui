@@ -18,3 +18,13 @@
 body { @apply bg-bg font-sans text-[15px] leading-relaxed text-fg antialiased; overflow-wrap: anywhere; }
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-thumb { @apply rounded-full border-2 border-transparent bg-line bg-clip-padding; }
+/* Markdown des réponses */
+.md { @apply space-y-3; }
+.md h1, .md h2, .md h3 { @apply font-semibold; }
+.md h1 { @apply text-xl; } .md h2 { @apply text-lg; }
+.md ul { @apply list-disc pl-6; } .md ol { @apply list-decimal pl-6; }
+.md a { @apply text-accent underline; }
+.md :not(pre) > code { @apply rounded bg-panel px-1 font-mono text-[13px]; }
+.md pre { @apply overflow-x-auto rounded-lg border border-line bg-panel p-3 font-mono text-[13px]; }
+.md blockquote { @apply border-l-2 border-line pl-3 text-muted; }
+.md table { @apply border-collapse; } .md th, .md td { @apply border border-line px-2 py-1; }

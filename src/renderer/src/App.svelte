@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { marked } from 'marked'
+  import DOMPurify from 'dompurify'
   type Part = { id: string; messageID: string; type: string; text?: string; tool?: string; state?: any }
 
   let roles = $state<Record<string, string>>({})
@@ -137,8 +139,8 @@
     }
   })
 
-  // ```code``` → [texte, code, texte, …]
-  const chunks = (t = '') => t.split(/```\w*\n?([\s\S]*?)```/)
+  // Markdown du modèle → HTML assaini.
+  const md = (t = '') => DOMPurify.sanitize(marked.parse(t, { async: false, breaks: true }))
   const dot: Record<string, string> = { completed: 'bg-green-500', error: 'bg-red-500', running: 'bg-amber-400 animate-pulse' }
 
   async function send() {
@@ -185,13 +187,8 @@
           <div class={roles[id] === 'user' ? 'ml-auto w-fit max-w-[80%] rounded-2xl bg-panel px-4 py-2.5' : 'space-y-2'}>
             {#each parts[id] ?? [] as part (part.id)}
               {#if part.type === 'text'}
-                {#each chunks(part.text) as c, i}
-                  {#if i % 2 === 0}
-                    {#if c.trim()}<p class="whitespace-pre-wrap">{c.trim()}</p>{/if}
-                  {:else}
-                    <pre class="overflow-x-auto rounded-lg border border-line bg-panel p-3 font-mono text-[13px]">{c}</pre>
-                  {/if}
-                {/each}
+                {#if roles[id] === 'user'}<p class="whitespace-pre-wrap">{part.text}</p>
+                {:else}<div class="md">{@html md(part.text)}</div>{/if}
               {:else if part.type === 'tool'}
                 <details class="group rounded-lg border border-line text-sm">
                   <summary class="flex cursor-pointer list-none items-center gap-2 px-3 py-1.5 text-muted hover:text-fg">

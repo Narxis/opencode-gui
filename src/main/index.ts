@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'node:path'
 import { listSessions, openSession, sendPrompt, startOpencode, stopOpencode } from './opencode'
 
@@ -11,6 +11,9 @@ function createWindow() {
     backgroundColor: '#1f1e1d',
     webPreferences: { preload: join(import.meta.dirname, '../preload/index.cjs') }
   })
+  // Liens du chat : navigateur externe, jamais dans la fenêtre.
+  win.webContents.setWindowOpenHandler(({ url }) => (shell.openExternal(url), { action: 'deny' }))
+  win.webContents.on('will-navigate', (e, url) => url !== win.webContents.getURL() && (e.preventDefault(), shell.openExternal(url)))
   if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL)
   else win.loadFile(join(import.meta.dirname, '../renderer/index.html'))
 
