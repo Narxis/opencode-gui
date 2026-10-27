@@ -13,7 +13,7 @@
   }
 
   window.oc.onEvent((e) => {
-    const p = e.properties
+    const p = e.properties ?? e.data // opencode 2.x place la charge utile dans `data`
     if (e.type === 'message.updated') {
       roles[p.info.id] = p.info.role
       touch(p.info.id)

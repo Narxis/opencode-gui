@@ -2,11 +2,14 @@ import { createOpencodeClient } from '@opencode-ai/sdk/v2'
 import type { OpencodeClient } from '@opencode-ai/sdk/v2'
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
+import { randomBytes } from 'node:crypto'
 
 type Emit = (event: unknown) => void
 
 let client: OpencodeClient | undefined
 let baseUrl = ''
+let password = randomBytes(16).toString('hex')
+const auth = () => `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}`
 let proc: ChildProcess | undefined
 let sessionId: string | undefined
 
@@ -30,8 +33,9 @@ async function waitReady(baseUrl: string, child: ChildProcess, log: () => string
   for (let i = 0; i < 120; i++) {
     if (exited) throw new Error(`opencode s'est arrêté au démarrage : ${log().trim()}`)
     try {
-      await fetch(`${baseUrl}/global/health`)
-      return
+      const res = await fetch(`${baseUrl}/api/health`, { headers: { Authorization: auth() } })
+      if (res.ok) return
+      await sleep(500)
     } catch {
       await sleep(500)
     }
@@ -47,60 +51,42 @@ export async function startOpencode(emit: Emit) {
   // shell: true pour trouver `opencode.cmd` sous Windows
   proc = spawn('opencode', ['serve', '--hostname=127.0.0.1', `--port=${port}`], {
     shell: true,
-    windowsHide: true
+    windowsHide: true,
+    env: { ...process.env, OPENCODE_SERVER_USERNAME: 'opencode', OPENCODE_SERVER_PASSWORD: password }
   })
-  proc.stdout?.on('data', (d) => (output = (output + d).slice(-2000)))
-  proc.stderr?.on('data', (d) => (output = (output + d).slice(-2000)))
+  const onData = (d: Buffer) => {
+    output = (output + d).slice(-2000)
+    // opencode 2.x affiche le mot de passe réellement utilisé au lancement.
+    const m = output.match(/server password\W+(\S+)/i)
+    if (m) password = m[1]
+  }
+  proc.stdout?.on('data', onData)
+  proc.stderr?.on('data', onData)
   proc.once('error', (err) => emit({ type: 'gui.error', properties: { message: String(err) } }))
   await waitReady(baseUrl, proc, () => output)
   const child = proc
   // Signale un arrêt d'opencode après le démarrage (sauf fermeture volontaire de l'app).
   child.once('exit', (code) => {
-    if (proc === child) emit({ type: 'gui.error', properties: { message: `opencode s'est arrêté (code ${code})` } })
+    if (proc === child) emit({ type: 'gui.error', properties: { message: `opencode s'est arrêté (code ${(code ?? 0) | 0})` } })
   })
 
-  client = createOpencodeClient({ baseUrl })
-  const { stream } = await client.event.subscribe()
+  client = createOpencodeClient({ baseUrl, headers: { Authorization: auth() } })
+  const { stream } = await client.v2.event.subscribe()
   void (async () => {
     for await (const event of stream) emit(event)
   })().catch((err) => emit({ type: 'gui.error', properties: { message: String(err) } }))
 }
 
-/** Crée une session par HTTP direct, pour avoir le détail exact en cas d'erreur. */
-async function createSession(): Promise<string> {
-  const res = await fetch(`${baseUrl}/session`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: '{}'
-  })
-  const body = await res.text()
-  if (res.ok) {
-    try {
-      const id = JSON.parse(body)?.id
-      if (typeof id === 'string') return id
-    } catch {
-      /* corps non JSON : détaillé ci-dessous */
-    }
-  }
-  let routes = ''
-  try {
-    const doc = await (await fetch(`${baseUrl}/doc`)).json()
-    routes = Object.keys(doc.paths ?? {}).filter((k) => /session/i.test(k)).slice(0, 25).join(', ')
-  } catch {
-    /* pas de /doc */
-  }
-  throw new Error(`POST /session → ${res.status} ${body.slice(0, 300)} | routes session : ${routes || 'inconnues'}`)
-}
-
 export async function sendPrompt(text: string) {
   if (!client) throw new Error('opencode non démarré')
   if (!sessionId) {
-    sessionId = await createSession()
+    const res = await client.v2.session.create({})
+    const created = res.data as { id?: string; data?: { id?: string } } | undefined
+    const id = created?.id ?? created?.data?.id
+    if (!id) throw new Error(`création de session impossible : ${JSON.stringify(res.error ?? res.data)}`)
+    sessionId = id
   }
-  const res = await client.session.promptAsync({
-    sessionID: sessionId,
-    parts: [{ type: 'text', text }]
-  })
+  const res = await client.v2.session.prompt({ sessionID: sessionId, prompt: { text } })
   if (res.error) throw new Error(`envoi impossible : ${JSON.stringify(res.error)}`)
 }
 
