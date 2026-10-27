@@ -17,7 +17,9 @@
   let side = $state(innerWidth >= 768) // barre latérale visible
   let threads = $state(false) // panneau « Fils de discussion »
   // Fils regroupés par dossier de projet.
-  const projects = $derived(Object.entries(Object.groupBy(sessions, (s) => s.location?.directory ?? '?')))
+  let query = $state<string>() // recherche de fils (undefined : champ fermé)
+  let folded = $state<Record<string, boolean>>({}) // sections repliées
+  const projects = $derived(Object.entries(Object.groupBy(sessions.filter((s) => !query || (s.title ?? '').toLowerCase().includes(query.toLowerCase())), (s) => s.location?.directory ?? '?')))
   const base = (dir: string) => dir.split(/[\\/]/).filter(Boolean).pop() ?? dir
 
   const refresh = () => window.oc.sessions().then((s) => (sessions = s), (err) => (error = String(err)))
@@ -191,24 +193,37 @@
 </script>
 
 <main class="relative flex h-screen overflow-hidden">
+  {#snippet icon(d: string)}<svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path {d} /></svg>{/snippet}
+  {#snippet toggle()}<button class="rounded-lg p-1.5 text-muted hover:bg-line/40 hover:text-fg" aria-label="Barre latérale" onclick={() => (side = !side)}>{@render icon('M3 5h18v14H3zM9 5v14')}</button>{/snippet}
   {#if side}
-  <aside class="flex w-64 shrink-0 flex-col gap-4 overflow-y-auto border-r border-line bg-panel p-3 text-sm">
-    <button class="rounded-lg border border-line px-3 py-2 text-left hover:bg-line/40" onclick={() => open()}>+ Nouveau fil</button>
+  <aside class="flex w-64 shrink-0 flex-col overflow-y-auto border-r border-line bg-bg px-2 pb-3 pt-2 text-sm">
+    <div class="px-1 pb-2">{@render toggle()}</div>
+    <button class="flex items-center gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-line/40" onclick={() => open()}>{@render icon('M12 5v14M5 12h14')}Créer</button>
+    {#if query === undefined}
+      <button class="flex items-center gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-line/40" onclick={() => (query = '')}>{@render icon('M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4')}Rechercher</button>
+    {:else}
+      <!-- svelte-ignore a11y_autofocus -->
+      <label class="flex items-center gap-3 rounded-lg bg-line/40 px-2 py-1.5">{@render icon('M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4')}<input class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted" placeholder="Rechercher" autofocus bind:value={query} onkeydown={(e) => e.key === 'Escape' && (query = undefined)} onblur={() => !query && (query = undefined)} /></label>
+    {/if}
     {#each projects as [dir, list] (dir)}
-      <div>
-        <p class="truncate px-2 pb-1 text-xs font-medium uppercase text-muted" title={dir}>{base(dir)}</p>
+      <div class="mt-5">
+        <button class="flex w-full items-center gap-1 px-2 pb-1 text-left text-xs font-semibold text-muted hover:text-fg" title={dir} onclick={() => (folded[dir] = !folded[dir])}>
+          <span class="truncate">{base(dir)}</span><span class="inline-block transition {folded[dir] ? '-rotate-90' : ''}">▾</span>
+        </button>
+        {#if !folded[dir]}
         {#each list ?? [] as s (s.id)}
-          <button class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-line/40 {s.id === current ? 'bg-line/60 text-fg' : 'text-muted'}" title={s.title} onclick={() => open(s.id)}>
+          <button class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-line/40 {s.id === current ? 'bg-line/70' : ''}" title={s.title} onclick={() => open(s.id)}>
             <span class="truncate">{s.title || 'Sans titre'}</span>
-            {#if badge[status[s.id]]}<span class="ml-auto size-2 shrink-0 rounded-full {badge[status[s.id]][0]}" title={badge[status[s.id]][1]} data-status={status[s.id]}></span>{/if}
+            {#if badge[status[s.id]]}<span class="ml-auto size-1.5 shrink-0 rounded-full {badge[status[s.id]][0]}" title={badge[status[s.id]][1]} data-status={status[s.id]}></span>{/if}
           </button>
         {/each}
+        {/if}
       </div>
     {/each}
   </aside>
   {/if}
   <section class="relative flex min-w-0 flex-1 flex-col">
-    <button class="absolute left-2 top-2 z-10 rounded-lg px-2 py-1 text-muted hover:bg-line/40 hover:text-fg" aria-label="Barre latérale" onclick={() => (side = !side)}>☰</button>
+    {#if !side}<div class="absolute left-3 top-2 z-10">{@render toggle()}</div>{/if}
     {#if !threads}<button class="absolute right-2 top-2 z-10 rounded-lg px-2 py-1 text-sm text-muted hover:bg-line/40 hover:text-fg" onclick={() => (threads = true)}>Fils de discussion</button>{/if}
     <div class="flex-1 overflow-y-auto">
       <div class="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
