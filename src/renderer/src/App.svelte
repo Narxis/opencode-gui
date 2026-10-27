@@ -21,6 +21,9 @@
   }
 
   let lastAssistant = ''
+  const text = (c: any) => (Array.isArray(c) ? c.map((x) => x.text ?? JSON.stringify(x)).join('\n') : JSON.stringify(c))
+  // Résumé d'un appel d'outil : première valeur texte de l'entrée, sur une ligne.
+  const brief = (i: any) => String(Object.values(i ?? {}).find((v) => typeof v === 'string') ?? '').replace(/\s+/g, ' ').slice(0, 80)
   let sent = 0
   const errText = (err: any) => err?.data?.message ?? err?.message ?? JSON.stringify(err)
 
@@ -67,8 +70,8 @@
         const prev = parts[mid]?.find((x) => x.id === p.id)
         const status = e.type.endsWith('success') ? 'completed' : e.type.endsWith('failed') ? 'error' : 'running'
         upsert(mid, {
-          id: p.id, messageID: mid, type: 'tool', tool: p.name ?? prev?.tool,
-          state: { ...prev?.state, status, ...(p.input ? { input: p.input } : {}) }
+          id: p.id, messageID: mid, type: 'tool', tool: p.name ?? p.tool ?? prev?.tool,
+          state: { ...prev?.state, status, ...(p.input ? { input: p.input } : {}), ...(p.content ? { output: text(p.content) } : {}) }
         })
         break
       }
@@ -138,8 +141,8 @@
                 <details class="group rounded-lg border border-line text-sm">
                   <summary class="flex cursor-pointer list-none items-center gap-2 px-3 py-1.5 text-muted hover:text-fg">
                     <span class="size-2 rounded-full {dot[part.state?.status] ?? 'bg-line'}"></span>
-                    <span class="font-mono text-fg">{part.tool}</span>
-                    <span class="truncate">{part.state?.title}</span>
+                    <span class="font-mono text-fg">{part.tool ?? 'outil'}</span>
+                    <span class="truncate">{part.state?.title ?? brief(part.state?.input)}</span>
                     <span class="ml-auto transition group-open:rotate-90">›</span>
                   </summary>
                   <pre class="max-h-80 overflow-auto border-t border-line p-3 font-mono text-xs text-muted">{JSON.stringify(part.state?.input ?? {}, null, 2)}{part.state?.output ? '\n\n' + part.state.output : ''}</pre>
