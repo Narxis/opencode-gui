@@ -60,7 +60,8 @@ Sources : types de `@opencode-ai/sdk` 1.19.4 (`dist/v2`), mémoire du projet (op
 | Après le titre : « — dernier message » en gris | dernier texte de la session | Oui |
 | Icône rouge à côté du titre (machine déconnectée ?) | Sans objet en local | Non |
 | Recherche | filtre sur les titres côté app | Oui |
-| Filtre, agrandir, fermer | UI seule (options du filtre inconnues) | Oui, filtre à préciser |
+| Bouton tri « Trier par » : Dernière activité (défaut, coche bleue), Nom, Date de création | `time.updated`, `title`, `time.created` | Oui |
+| Agrandir, fermer | UI seule | Oui |
 
 Manque côté app : rien de nouveau hors PR ; tout vient de l'état des fils (phase 1) et de `todo.updated`.
 
