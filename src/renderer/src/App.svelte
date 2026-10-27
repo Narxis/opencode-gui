@@ -13,7 +13,7 @@
   }
 
   window.oc.onEvent((e) => {
-    const p = e.properties
+    const p = e.properties ?? e.data // opencode 2.x place la charge utile dans `data`
     if (e.type === 'message.updated') {
       roles[p.info.id] = p.info.role
       touch(p.info.id)
@@ -24,6 +24,10 @@
       const i = list.findIndex((x) => x.id === part.id)
       if (i >= 0) list[i] = part
       else list.push(part)
+    } else if (e.type === 'message.part.delta') {
+      // Texte reçu au fil de l'eau : on l'ajoute à la partie correspondante.
+      const part = (parts[p.messageID] ??= []).find((x) => x.id === p.partID) as any
+      if (part) part[p.field] = (part[p.field] ?? '') + p.delta
     } else if (e.type === 'session.idle') {
       busy = false
     } else if (e.type === 'gui.error') {
