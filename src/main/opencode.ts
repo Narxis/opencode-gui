@@ -1,5 +1,5 @@
-import { createOpencodeClient } from '@opencode-ai/sdk'
-import type { OpencodeClient } from '@opencode-ai/sdk'
+import { createOpencodeClient } from '@opencode-ai/sdk/v2'
+import type { OpencodeClient } from '@opencode-ai/sdk/v2'
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
 
@@ -68,14 +68,15 @@ export async function startOpencode(emit: Emit) {
 export async function sendPrompt(text: string) {
   if (!client) throw new Error('opencode non démarré')
   if (!sessionId) {
-    const res = await client.session.create({ body: {} })
-    if (!res.data) throw new Error('création de session impossible')
+    const res = await client.session.create({})
+    if (!res.data) throw new Error(`création de session impossible : ${JSON.stringify(res.error)}`)
     sessionId = res.data.id
   }
-  await client.session.promptAsync({
-    path: { id: sessionId },
-    body: { parts: [{ type: 'text', text }] }
+  const res = await client.session.promptAsync({
+    sessionID: sessionId,
+    parts: [{ type: 'text', text }]
   })
+  if (res.error) throw new Error(`envoi impossible : ${JSON.stringify(res.error)}`)
 }
 
 export function stopOpencode() {
