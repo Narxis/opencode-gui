@@ -42,7 +42,7 @@ Sources : types de `@opencode-ai/sdk` 1.19.4 (`dist/v2`), mémoire du projet (op
 | 3. Chat de projet + coordinateur | Projet = dossier, session racine avec agent `coordinateur`, MCP `start_thread` / `message_thread` / `list_threads` | On demande une tâche, le coordinateur répond court et une carte de fil apparaît dans le chat |
 | 4. Retour au coordinateur | Fin ou blocage d'un fil → message au chat du coordinateur ; fils en parallèle | Le coordinateur annonce « fil X prêt » et enchaîne sans qu'on relance |
 | 5. Vue d'un fil complète | Checklist (`todo.updated`), diffs (`session.diff`), bouton stop, « marquer terminé » | La vue fil ressemble à celle de Claude Code |
-| 6. Extras | Plusieurs projets, mémoire (`AGENTS.md`) en lecture, liste de PR via `gh`, installeur Windows | Produit complet à installer |
+| 6. Extras | Panneau Fichiers avec filtre Type, plusieurs projets, mémoire (`AGENTS.md`) en lecture, liste de PR via `gh`, installeur Windows | Produit complet à installer |
 
 ## 4. Panneau « Fils de discussion » (capture Claude de Geoffrey)
 
@@ -64,6 +64,10 @@ Sources : types de `@opencode-ai/sdk` 1.19.4 (`dist/v2`), mémoire du projet (op
 | Agrandir, fermer | UI seule | Oui |
 
 Manque côté app : rien de nouveau hors PR ; tout vient de l'état des fils (phase 1) et de `todo.updated`.
+
+### Panneau « Fichiers » du projet (bibliothèque)
+
+Liste des fichiers livrés par tous les fils du projet, avec un menu « Type » : Tous les types (défaut, coche bleue), Images, Documents, Artéfacts, Liens, chacun avec son nombre (grisé si 0). Source : fichiers créés/modifiés par les fils (outils `write` / `edit`), classés par extension (images : png, jpg… ; documents : md, pdf, docx… ; artéfacts : html) ; liens : URL trouvées dans les réponses des fils. Faisable, en phase 6.
 
 ## 5. Décisions (Geoffrey, 2026-10-27)
 
