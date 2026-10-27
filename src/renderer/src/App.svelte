@@ -11,6 +11,8 @@
   let error = $state('')
   let sessions = $state<any[]>([])
   let current = $state<string>()
+  // État de chaque fil, d'après les événements : busy, wait (attend l'utilisateur), done, error.
+  let status = $state<Record<string, string>>({})
   let side = $state(innerWidth >= 768) // barre latérale visible
   // Fils regroupés par dossier de projet.
   const projects = $derived(Object.entries(Object.groupBy(sessions, (s) => s.location?.directory ?? '?')))
@@ -21,6 +23,7 @@
   /** Ouvre un fil (sans id : nouveau fil) et recharge son historique. */
   async function open(id?: string) {
     current = id
+    if (id && status[id] === 'done') delete status[id]
     roles = {}
     order = []
     parts = {}
@@ -66,8 +69,25 @@
   let sent = 0
   const errText = (err: any) => err?.data?.message ?? err?.message ?? JSON.stringify(err)
 
+  /** Met à jour l'état du fil `sid` selon l'événement ; « prêt » seulement pour un fil qu'on ne regarde pas. */
+  function track(sid: string | undefined, type: string, p: any) {
+    if (!sid) return
+    const kind = type === 'session.status' ? p.status?.type : type
+    let next: string | undefined
+    if (/^(permission|question)(\.v2)?\.asked$/.test(kind)) next = 'wait'
+    else if (/^(session\.execution\.failed|session\.error)$/.test(kind)) next = 'error'
+    else if (/^(idle|session\.idle|session\.execution\.succeeded)$/.test(kind)) next = status[sid] === 'busy' && sid !== current ? 'done' : status[sid] === 'busy' ? '' : undefined
+    else if (/^(busy|retry|session\.(step|text|tool)\.|(permission|question)(\.v2)?\.(replied|rejected))/.test(kind)) next = 'busy'
+    if (next === undefined || status[sid] === next) return
+    if (next) status[sid] = next
+    else delete status[sid]
+    if (!sessions.some((s) => s.id === sid)) refresh() // fil créé ailleurs (ex. par le coordinateur)
+  }
+
   window.oc.onEvent((e) => {
     const p = e.properties ?? e.data // opencode 2.x place la charge utile dans `data`
+    track(p?.sessionID, e.type, p ?? {})
+    if (e.other) return // événement d'un autre fil : seul son état nous intéresse
     switch (e.type) {
       // Événements « classiques »
       case 'message.updated':
@@ -142,6 +162,12 @@
   // Markdown du modèle → HTML assaini.
   const md = (t = '') => DOMPurify.sanitize(marked.parse(t, { async: false, breaks: true }))
   const dot: Record<string, string> = { completed: 'bg-green-500', error: 'bg-red-500', running: 'bg-amber-400 animate-pulse' }
+  const badge: Record<string, [string, string]> = {
+    busy: ['bg-amber-400 animate-pulse', 'En cours'],
+    wait: ['bg-blue-500 animate-pulse', 'Attend ta réponse'],
+    done: ['bg-green-500', 'Prêt'],
+    error: ['bg-red-500', 'Échec']
+  }
 
   async function send() {
     const text = input.trim()
@@ -170,7 +196,10 @@
       <div>
         <p class="truncate px-2 pb-1 text-xs font-medium uppercase text-muted" title={dir}>{base(dir)}</p>
         {#each list ?? [] as s (s.id)}
-          <button class="block w-full truncate rounded-lg px-2 py-1.5 text-left hover:bg-line/40 {s.id === current ? 'bg-line/60 text-fg' : 'text-muted'}" title={s.title} onclick={() => open(s.id)}>{s.title || 'Sans titre'}</button>
+          <button class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-line/40 {s.id === current ? 'bg-line/60 text-fg' : 'text-muted'}" title={s.title} onclick={() => open(s.id)}>
+            <span class="truncate">{s.title || 'Sans titre'}</span>
+            {#if badge[status[s.id]]}<span class="ml-auto size-2 shrink-0 rounded-full {badge[status[s.id]][0]}" title={badge[status[s.id]][1]} data-status={status[s.id]}></span>{/if}
+          </button>
         {/each}
       </div>
     {/each}
