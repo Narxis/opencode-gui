@@ -81,11 +81,10 @@ async function launchOpencode(emit: Emit) {
   emit({ type: 'gui.ready' })
   void (async () => {
     for await (const event of stream) {
-      // /api/event mélange toutes les sessions d'opencode : on ne garde que la nôtre.
+      // /api/event mélange toutes les sessions : celles des autres fils servent seulement à leur état.
       const e = event as { data?: { sessionID?: string }; properties?: { sessionID?: string } }
       const sid = e.data?.sessionID ?? e.properties?.sessionID
-      if (sid && sessionId && sid !== sessionId) continue
-      emit(event)
+      emit(sid && sid !== sessionId ? { ...event, other: true } : event)
     }
   })().catch((err) => emit({ type: 'gui.error', properties: { message: String(err) } }))
 }
