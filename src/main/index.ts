@@ -12,7 +12,9 @@ function createWindow() {
   if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL)
   else win.loadFile(join(import.meta.dirname, '../renderer/index.html'))
 
-  const emit = (event: unknown) => win.webContents.send('oc:event', event)
+  const emit = (event: unknown) => {
+    if (!win.isDestroyed()) win.webContents.send('oc:event', event)
+  }
   win.webContents.once('did-finish-load', () => {
     startOpencode(emit).catch((err) =>
       emit({ type: 'gui.error', properties: { message: String(err) } })
