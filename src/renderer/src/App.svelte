@@ -30,10 +30,10 @@
           upsert(m.id, { id: m.id + ':text', messageID: m.id, type: 'text', text: m.text })
         } else if (m.type === 'assistant') {
           roles[m.id] = 'assistant'
-          for (const c of m.content) {
-            if (c.type === 'text') upsert(m.id, { id: c.id, messageID: m.id, type: 'text', text: c.text })
+          for (const [i, c] of m.content.entries()) {
+            if (c.type === 'text') upsert(m.id, { id: c.id ?? `${m.id}:${i}`, messageID: m.id, type: 'text', text: c.text })
             else if (c.type === 'tool')
-              upsert(m.id, { id: c.id, messageID: m.id, type: 'tool', tool: c.name, state: { ...c.state, output: c.state.content && text(c.state.content) } })
+              upsert(m.id, { id: c.id, messageID: m.id, type: 'tool', tool: c.name, state: { ...c.state, output: c.state.content ? text(c.state.content) : c.state.error?.message } })
           }
         }
       }

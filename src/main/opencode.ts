@@ -115,7 +115,7 @@ export async function listSessions() {
 export async function openSession(id?: string) {
   await ready
   sessionId = id
-  return id ? (await api(`/api/session/${id}/message?order=asc&limit=500`)).data : []
+  return id ? (await api(`/api/session/${id}/message?order=asc&limit=200`)).data : []
 }
 
 const post = (path: string, body: unknown) => api(path, 'POST', body)
