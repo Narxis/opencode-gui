@@ -73,6 +73,24 @@ Manque côté app : rien de nouveau hors PR ; tout vient de l'état des fils (ph
 
 Correspondance : un dossier de fichiers partagé par projet (`<projet>/.opencode-gui/files/`, hors git) dans lequel les fils déposent leurs livrables ; le dossier du projet est le « dossier lié ». Le propriétaire est Geoffrey pour un fichier ajouté à la main, et le nom du fil pour un fichier créé par un fil. Taille et date viennent du disque (`fs.stat`, côté main), le genre de l'extension. Pour les Liens, on prend les URL trouvées dans les réponses des fils. « Ajouter » ouvre la boîte de dialogue de fichiers d'Electron et copie le fichier dans le dossier. Tout est faisable, en phase 6.
 
+### Chat de projet : détails (capture Claude de Geoffrey)
+
+| Élément | Source opencode | Faisable ? | Phase |
+|---|---|---|---|
+| Séparateur « Nouveau » (trait + mot en couleur d'accent) au-dessus des messages non lus | dernier message lu par session, stocké par l'app | Oui | 3 |
+| Carte de fil dans le chat : point d'état, titre en gras, résumé en gris tronqué | état du fil (phase 1), `title`, dernier texte du fil | Oui | 3 |
+| Lien inline vers un fil dans la réponse du coordinateur, précédé de l'icône d'état | le coordinateur écrit `[titre](thread:<id>)`, l'app le rend en lien | Oui | 4 |
+| Carte au survol du lien : état (« Nécessite une saisie », icône ⚠ ambre), « N réponses · maintenant », titre en gras, « N fusionné(s) » | état, nombre de messages (`/api/session/:id/message`), `time.updated` ; PR fusionnées comme en §4 | Oui, sauf le nombre de PR (phase 6) | 4 |
+| Barre d'actions au survol d'un message : ajouter une réaction, copier, « … » | réactions stockées par l'app ; copier = presse-papiers | Oui | 5 |
+| Menu « … » : rangée de 6 réactions rapides (❤️ 👍 💪 🎉 👀 🚀), « Répondre » (cite le message dans la saisie), « Copier le message » (texte), « Copier le message au format Markdown » | UI seule ; texte brut tiré du markdown rendu | Oui | 5 |
+| Saisie : menu « + » → « Ajouter des fichiers ou des photos » | boîte de dialogue Electron + partie fichier dans le prompt ⚠ (format v2 à vérifier) | Oui | 5 |
+| Menu « + » → « Commandes slash » | `/api/command` (commandes d'opencode) | Oui | 5 |
+| Menu « + » → « Travailler en local » › liste des dossiers (nom + chemin complet) | dossier de travail de la session (`location`) ; dossiers déjà connus via les sessions | Oui | 6 (avec plusieurs projets) |
+| Saisie : micro (dictée) | Electron n'a pas la reconnaissance vocale de Chrome ; il faudrait un modèle local (whisper) ou une API | Difficile, à décider | 6 |
+| Menu ▾ du micro : titre « Microphone », liste des micros (coche bleue sur le choisi, « Default - … » en tête), interrupteur « Maintenez pour enregistrer. » | `navigator.mediaDevices.enumerateDevices()` (audioinput) ; mode maintenir = enregistrer tant que le bouton est pressé | Oui (la liste) | 6 |
+| Saisie : sélecteur de modèle (« Sonnet 5.5 ») | `/api/model`, `/api/session/:id/model` | Oui | 5 |
+| Saisie : spinner d'activité à droite, envoyer ↵ | état `busy` du fil ouvert | Oui | 3 |
+
 ## 5. Décisions (Geoffrey, 2026-10-27)
 
 1. **Modèle du coordinateur** : Sonnet 5.5 ; les fils gardent le modèle par défaut.
