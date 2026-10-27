@@ -85,7 +85,8 @@ Correspondance : un dossier de fichiers partagé par projet (`<projet>/.opencode
 | Saisie : menu « + » → « Ajouter des fichiers ou des photos » | boîte de dialogue Electron + partie fichier dans le prompt ⚠ (format v2 à vérifier) | Oui | 5 |
 | Menu « + » → « Commandes slash » | `/api/command` (commandes d'opencode) | Oui | 5 |
 | Menu « + » → « Travailler en local » › liste des dossiers (nom + chemin complet) | dossier de travail de la session (`location`) ; dossiers déjà connus via les sessions | Oui | 6 (avec plusieurs projets) |
-| Saisie : micro (dictée) avec menu ▾ | Electron n'a pas la reconnaissance vocale de Chrome ; il faudrait un modèle local (whisper) ou une API | Difficile, à décider | 6 |
+| Saisie : micro (dictée) | Electron n'a pas la reconnaissance vocale de Chrome ; il faudrait un modèle local (whisper) ou une API | Difficile, à décider | 6 |
+| Menu ▾ du micro : titre « Microphone », liste des micros (coche bleue sur le choisi, « Default - … » en tête), interrupteur « Maintenez pour enregistrer. » | `navigator.mediaDevices.enumerateDevices()` (audioinput) ; mode maintenir = enregistrer tant que le bouton est pressé | Oui (la liste) | 6 |
 | Saisie : sélecteur de modèle (« Sonnet 5.5 ») | `/api/model`, `/api/session/:id/model` | Oui | 5 |
 | Saisie : spinner d'activité à droite, envoyer ↵ | état `busy` du fil ouvert | Oui | 3 |
 
