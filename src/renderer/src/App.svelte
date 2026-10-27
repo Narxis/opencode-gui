@@ -7,6 +7,40 @@
   let input = $state('')
   let busy = $state(false)
   let error = $state('')
+  let sessions = $state<any[]>([])
+  let current = $state<string>()
+  // Fils regroupés par dossier de projet.
+  const projects = $derived(Object.entries(Object.groupBy(sessions, (s) => s.location?.directory ?? '?')))
+  const base = (dir: string) => dir.split(/[\\/]/).filter(Boolean).pop() ?? dir
+
+  const refresh = () => window.oc.sessions().then((s) => (sessions = s), (err) => (error = String(err)))
+
+  /** Ouvre un fil (sans id : nouveau fil) et recharge son historique. */
+  async function open(id?: string) {
+    current = id
+    roles = {}
+    order = []
+    parts = {}
+    busy = false
+    error = ''
+    try {
+      for (const m of await window.oc.open(id)) {
+        if (m.type === 'user') {
+          roles[m.id] = 'user'
+          upsert(m.id, { id: m.id + ':text', messageID: m.id, type: 'text', text: m.text })
+        } else if (m.type === 'assistant') {
+          roles[m.id] = 'assistant'
+          for (const c of m.content) {
+            if (c.type === 'text') upsert(m.id, { id: c.id, messageID: m.id, type: 'text', text: c.text })
+            else if (c.type === 'tool')
+              upsert(m.id, { id: c.id, messageID: m.id, type: 'tool', tool: c.name, state: { ...c.state, output: c.state.content && text(c.state.content) } })
+          }
+        }
+      }
+    } catch (err) {
+      error = String(err)
+    }
+  }
 
   function touch(messageID: string) {
     if (!order.includes(messageID)) order.push(messageID)
@@ -79,6 +113,7 @@
       }
       case 'session.execution.succeeded':
         busy = false
+        refresh()
         break
       case 'session.execution.failed':
         error = errText(p.error ?? p)
@@ -90,6 +125,9 @@
         break
       case 'session.idle':
         busy = false
+        break
+      case 'gui.ready':
+        refresh()
         break
       case 'gui.error':
         error = p.message
@@ -112,7 +150,8 @@
     upsert(id, { id: id + ':text', messageID: id, type: 'text', text })
     error = ''
     try {
-      await window.oc.send(text)
+      current = await window.oc.send(text)
+      refresh()
     } catch (err) {
       error = String(err)
       busy = false
@@ -121,7 +160,17 @@
 </script>
 
 <main class="flex h-screen">
-  <aside class="w-60 border-r border-line bg-panel p-4 text-sm text-muted">Projets</aside>
+  <aside class="flex w-64 flex-col gap-4 overflow-y-auto border-r border-line bg-panel p-3 text-sm">
+    <button class="rounded-lg border border-line px-3 py-2 text-left hover:bg-line/40" onclick={() => open()}>+ Nouveau fil</button>
+    {#each projects as [dir, list] (dir)}
+      <div>
+        <p class="truncate px-2 pb-1 text-xs font-medium uppercase text-muted" title={dir}>{base(dir)}</p>
+        {#each list ?? [] as s (s.id)}
+          <button class="block w-full truncate rounded-lg px-2 py-1.5 text-left hover:bg-line/40 {s.id === current ? 'bg-line/60 text-fg' : 'text-muted'}" title={s.title} onclick={() => open(s.id)}>{s.title || 'Sans titre'}</button>
+        {/each}
+      </div>
+    {/each}
+  </aside>
   <section class="flex flex-1 flex-col">
     <div class="flex-1 overflow-y-auto">
       <div class="mx-auto max-w-3xl space-y-6 px-6 py-8">

@@ -78,6 +78,7 @@ async function launchOpencode(emit: Emit) {
 
   client = createOpencodeClient({ baseUrl, headers: { Authorization: auth } })
   const { stream } = await client.v2.event.subscribe()
+  emit({ type: 'gui.ready' })
   void (async () => {
     for await (const event of stream) {
       // /api/event mélange toutes les sessions d'opencode : on ne garde que la nôtre.
@@ -101,13 +102,29 @@ export async function sendPrompt(text: string) {
     if (!sessionId) throw new Error(`création de session impossible : ${JSON.stringify(created)}`)
   }
   await post(`/api/session/${sessionId}/prompt`, { text })
+  return sessionId
 }
 
-async function post(path: string, body: unknown) {
+/** Fils (sessions) d'opencode, plus récents d'abord. */
+export async function listSessions() {
+  await ready
+  return (await api('/api/session?order=desc&limit=100')).data
+}
+
+/** Passe sur un fil (undefined = nouveau fil, créé au premier message) et renvoie son historique. */
+export async function openSession(id?: string) {
+  await ready
+  sessionId = id
+  return id ? (await api(`/api/session/${id}/message?order=asc&limit=500`)).data : []
+}
+
+const post = (path: string, body: unknown) => api(path, 'POST', body)
+
+async function api(path: string, method = 'GET', body?: unknown) {
   const res = await fetch(baseUrl + path, {
-    method: 'POST',
+    method,
     headers: { Authorization: auth, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: body ? JSON.stringify(body) : undefined
   })
   if (!res.ok) throw new Error(`${path} → ${res.status} ${await res.text()}`)
   return res.json()
