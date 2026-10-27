@@ -43,9 +43,9 @@ Sources : types de `@opencode-ai/sdk` 1.19.4 (`dist/v2`), mémoire du projet (op
 | 5. Vue d'un fil complète | Checklist (`todo.updated`), diffs (`session.diff`), bouton stop, « marquer terminé » | La vue fil ressemble à celle de Claude Code |
 | 6. Extras | Plusieurs projets, mémoire (`AGENTS.md`) en lecture, liste de PR via `gh`, installeur Windows | Produit complet à installer |
 
-## 4. Décisions à prendre
+## 4. Décisions (Geoffrey, 2026-10-27)
 
-1. **Modèle du coordinateur** : un modèle rapide et pas cher suffit (il délègue) ; les fils gardent le modèle par défaut. Lequel ?
-2. **Un projet = un dossier ?** Proposé : oui (c'est ce que fait opencode via `location.directory`, et `AGENTS.md` sert de mémoire).
-3. **Fils en parallèle ?** Proposé : oui, limite 3 à la fois (coût, conflits de fichiers dans le même dossier).
-4. **MCP local maison ou dépendance `@modelcontextprotocol/sdk` ?** Proposé : maison (JSON-RPC minimal, 3 outils) pour rester sans dépendance ; à revoir si opencode exige plus du protocole.
+1. **Modèle du coordinateur** : Sonnet 5.5 ; les fils gardent le modèle par défaut.
+2. **Un projet = un dossier** : oui (`location.directory`, `AGENTS.md` comme mémoire).
+3. **Fils en parallèle** : oui, 3 au maximum.
+4. **MCP local** : maison (JSON-RPC minimal, 3 outils), sans dépendance.
