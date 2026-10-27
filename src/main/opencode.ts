@@ -52,6 +52,11 @@ export async function startOpencode(emit: Emit) {
   proc.stderr?.on('data', (d) => (output = (output + d).slice(-2000)))
   proc.once('error', (err) => emit({ type: 'gui.error', properties: { message: String(err) } }))
   await waitReady(baseUrl, proc, () => output)
+  const child = proc
+  // Signale un arrêt d'opencode après le démarrage (sauf fermeture volontaire de l'app).
+  child.once('exit', (code) => {
+    if (proc === child) emit({ type: 'gui.error', properties: { message: `opencode s'est arrêté (code ${code})` } })
+  })
 
   client = createOpencodeClient({ baseUrl })
   const { stream } = await client.event.subscribe()
@@ -74,8 +79,10 @@ export async function sendPrompt(text: string) {
 }
 
 export function stopOpencode() {
-  if (!proc?.pid) return
+  const child = proc
+  proc = undefined
+  if (!child?.pid) return
   // Sous Windows, shell: true impose de tuer tout l'arbre de processus.
-  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'])
-  else proc.kill()
+  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'])
+  else child.kill()
 }
