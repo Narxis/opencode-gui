@@ -12,27 +12,86 @@
     if (!order.includes(messageID)) order.push(messageID)
   }
 
+  function upsert(messageID: string, part: Part) {
+    touch(messageID)
+    const list = (parts[messageID] ??= [])
+    const i = list.findIndex((x) => x.id === part.id)
+    if (i >= 0) list[i] = { ...list[i], ...part }
+    else list.push(part)
+  }
+
+  const errText = (err: any) => err?.data?.message ?? err?.message ?? JSON.stringify(err)
+
   window.oc.onEvent((e) => {
     const p = e.properties ?? e.data // opencode 2.x place la charge utile dans `data`
-    if (e.type === 'message.updated') {
-      roles[p.info.id] = p.info.role
-      touch(p.info.id)
-    } else if (e.type === 'message.part.updated') {
-      const part: Part = p.part
-      touch(part.messageID)
-      const list = (parts[part.messageID] ??= [])
-      const i = list.findIndex((x) => x.id === part.id)
-      if (i >= 0) list[i] = part
-      else list.push(part)
-    } else if (e.type === 'message.part.delta') {
-      // Texte reçu au fil de l'eau : on l'ajoute à la partie correspondante.
-      const part = (parts[p.messageID] ??= []).find((x) => x.id === p.partID) as any
-      if (part) part[p.field] = (part[p.field] ?? '') + p.delta
-    } else if (e.type === 'session.idle') {
-      busy = false
-    } else if (e.type === 'gui.error') {
-      error = p.message
-      busy = false
+    switch (e.type) {
+      // Événements « classiques »
+      case 'message.updated':
+        roles[p.info.id] = p.info.role
+        touch(p.info.id)
+        break
+      case 'message.part.updated':
+        upsert(p.part.messageID, p.part)
+        break
+      case 'message.part.delta': {
+        // Texte reçu au fil de l'eau : on l'ajoute à la partie correspondante.
+        const part = (parts[p.messageID] ??= []).find((x) => x.id === p.partID) as any
+        if (part) part[p.field] = (part[p.field] ?? '') + p.delta
+        break
+      }
+      // Événements « session.next » (API /api d'opencode 2.x)
+      case 'session.next.prompted':
+        roles[p.messageID] = 'user'
+        upsert(p.messageID, { id: p.messageID + ':text', messageID: p.messageID, type: 'text', text: p.prompt?.text ?? '' })
+        break
+      case 'session.next.step.started':
+        roles[p.assistantMessageID] = 'assistant'
+        touch(p.assistantMessageID)
+        break
+      case 'session.next.text.started':
+        roles[p.assistantMessageID] = 'assistant'
+        upsert(p.assistantMessageID, { id: p.textID, messageID: p.assistantMessageID, type: 'text', text: '' })
+        break
+      case 'session.next.text.delta': {
+        const part = (parts[p.assistantMessageID] ??= []).find((x) => x.id === p.textID)
+        if (part) part.text = (part.text ?? '') + p.delta
+        else upsert(p.assistantMessageID, { id: p.textID, messageID: p.assistantMessageID, type: 'text', text: p.delta })
+        break
+      }
+      case 'session.next.text.ended':
+        upsert(p.assistantMessageID, { id: p.textID, messageID: p.assistantMessageID, type: 'text', text: p.text })
+        break
+      case 'session.next.tool.input.started':
+        upsert(p.assistantMessageID, { id: p.callID, messageID: p.assistantMessageID, type: 'tool', tool: p.name, state: { status: 'running' } })
+        break
+      case 'session.next.tool.called':
+        upsert(p.assistantMessageID, { id: p.callID, messageID: p.assistantMessageID, type: 'tool', tool: p.tool, state: { status: 'running', input: p.input } })
+        break
+      case 'session.next.tool.success':
+      case 'session.next.tool.failed': {
+        const ok = e.type.endsWith('success')
+        const prev = parts[p.assistantMessageID]?.find((x) => x.id === p.callID)
+        upsert(p.assistantMessageID, {
+          id: p.callID, messageID: p.assistantMessageID, type: 'tool', tool: prev?.tool,
+          state: { ...prev?.state, status: ok ? 'completed' : 'error' }
+        })
+        break
+      }
+      case 'session.next.step.ended':
+        if (!/tool/i.test(p.finish ?? '')) busy = false
+        break
+      case 'session.next.step.failed':
+      case 'session.error':
+        error = errText(p.error)
+        busy = false
+        break
+      case 'session.idle':
+        busy = false
+        break
+      case 'gui.error':
+        error = p.message
+        busy = false
+        break
     }
   })
 
