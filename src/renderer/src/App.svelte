@@ -20,6 +20,7 @@
     else list.push(part)
   }
 
+  let lastAssistant = ''
   const errText = (err: any) => err?.data?.message ?? err?.message ?? JSON.stringify(err)
 
   window.oc.onEvent((e) => {
@@ -39,48 +40,49 @@
         if (part) part[p.field] = (part[p.field] ?? '') + p.delta
         break
       }
-      // Événements « session.next » (API /api d'opencode 2.x)
-      case 'session.next.prompted':
-        roles[p.messageID] = 'user'
-        upsert(p.messageID, { id: p.messageID + ':text', messageID: p.messageID, type: 'text', text: p.prompt?.text ?? '' })
+      // Événements d'opencode 2.2 (observés sur /api/event)
+      case 'session.inbox.enqueued':
+        if (p.item?.type === 'user') {
+          roles[p.inboxID] = 'user'
+          upsert(p.inboxID, { id: p.inboxID + ':text', messageID: p.inboxID, type: 'text', text: p.item.payload?.text ?? '' })
+        }
         break
-      case 'session.next.step.started':
+      case 'session.step.started':
+        lastAssistant = p.assistantMessageID
+        roles[lastAssistant] = 'assistant'
+        touch(lastAssistant)
+        break
+      case 'session.text.started':
+      case 'session.text.delta':
+      case 'session.text.ended': {
+        // Un texte = assistantMessageID + ordinal ; `delta` s'ajoute, `text` remplace.
+        const id = `${p.assistantMessageID}:${p.ordinal}`
         roles[p.assistantMessageID] = 'assistant'
-        touch(p.assistantMessageID)
-        break
-      case 'session.next.text.started':
-        roles[p.assistantMessageID] = 'assistant'
-        upsert(p.assistantMessageID, { id: p.textID, messageID: p.assistantMessageID, type: 'text', text: '' })
-        break
-      case 'session.next.text.delta': {
-        const part = (parts[p.assistantMessageID] ??= []).find((x) => x.id === p.textID)
-        if (part) part.text = (part.text ?? '') + p.delta
-        else upsert(p.assistantMessageID, { id: p.textID, messageID: p.assistantMessageID, type: 'text', text: p.delta })
+        const part = parts[p.assistantMessageID]?.find((x) => x.id === id)
+        const text = p.text ?? (part?.text ?? '') + (p.delta ?? '')
+        upsert(p.assistantMessageID, { id, messageID: p.assistantMessageID, type: 'text', text })
         break
       }
-      case 'session.next.text.ended':
-        upsert(p.assistantMessageID, { id: p.textID, messageID: p.assistantMessageID, type: 'text', text: p.text })
-        break
-      case 'session.next.tool.input.started':
-        upsert(p.assistantMessageID, { id: p.callID, messageID: p.assistantMessageID, type: 'tool', tool: p.name, state: { status: 'running' } })
-        break
-      case 'session.next.tool.called':
-        upsert(p.assistantMessageID, { id: p.callID, messageID: p.assistantMessageID, type: 'tool', tool: p.tool, state: { status: 'running', input: p.input } })
-        break
-      case 'session.next.tool.success':
-      case 'session.next.tool.failed': {
-        const ok = e.type.endsWith('success')
-        const prev = parts[p.assistantMessageID]?.find((x) => x.id === p.callID)
-        upsert(p.assistantMessageID, {
-          id: p.callID, messageID: p.assistantMessageID, type: 'tool', tool: prev?.tool,
-          state: { ...prev?.state, status: ok ? 'completed' : 'error' }
+      case 'session.tool.input.started':
+      case 'session.tool.called':
+      case 'session.tool.success':
+      case 'session.tool.failed': {
+        const mid = p.assistantMessageID ?? lastAssistant
+        const prev = parts[mid]?.find((x) => x.id === p.id)
+        const status = e.type.endsWith('success') ? 'completed' : e.type.endsWith('failed') ? 'error' : 'running'
+        upsert(mid, {
+          id: p.id, messageID: mid, type: 'tool', tool: p.name ?? prev?.tool,
+          state: { ...prev?.state, status, ...(p.input ? { input: p.input } : {}) }
         })
         break
       }
-      case 'session.next.step.ended':
-        if (!/tool/i.test(p.finish ?? '')) busy = false
+      case 'session.execution.succeeded':
+        busy = false
         break
-      case 'session.next.step.failed':
+      case 'session.execution.failed':
+        error = errText(p.error ?? p)
+        busy = false
+        break
       case 'session.error':
         error = errText(p.error)
         busy = false
