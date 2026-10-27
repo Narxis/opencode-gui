@@ -82,7 +82,9 @@ Correspondance : un dossier de fichiers partagé par projet (`<projet>/.opencode
 | Lien inline vers un fil dans la réponse du coordinateur, précédé de l'icône d'état | le coordinateur écrit `[titre](thread:<id>)`, l'app le rend en lien | Oui | 4 |
 | Carte au survol du lien : état (« Nécessite une saisie », icône ⚠ ambre), « N réponses · maintenant », titre en gras, « N fusionné(s) » | état, nombre de messages (`/api/session/:id/message`), `time.updated` ; PR fusionnées comme en §4 | Oui, sauf le nombre de PR (phase 6) | 4 |
 | Barre d'actions au survol d'un message : réaction, copier, « … » | réaction stockée par l'app ; copier = presse-papiers | Oui ; contenu du « … » à préciser | 5 |
-| Saisie : « + » pour joindre un fichier | partie fichier dans le prompt ⚠ (format v2 à vérifier) | Oui | 5 |
+| Saisie : menu « + » → « Ajouter des fichiers ou des photos » | boîte de dialogue Electron + partie fichier dans le prompt ⚠ (format v2 à vérifier) | Oui | 5 |
+| Menu « + » → « Commandes slash » | `/api/command` (commandes d'opencode) | Oui | 5 |
+| Menu « + » → « Travailler en local » › liste des dossiers (nom + chemin complet) | dossier de travail de la session (`location`) ; dossiers déjà connus via les sessions | Oui | 6 (avec plusieurs projets) |
 | Saisie : micro (dictée) avec menu ▾ | Electron n'a pas la reconnaissance vocale de Chrome ; il faudrait un modèle local (whisper) ou une API | Difficile, à décider | 6 |
 | Saisie : sélecteur de modèle (« Sonnet 5.5 ») | `/api/model`, `/api/session/:id/model` | Oui | 5 |
 | Saisie : spinner d'activité à droite, envoyer ↵ | état `busy` du fil ouvert | Oui | 3 |
