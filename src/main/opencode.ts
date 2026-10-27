@@ -79,7 +79,13 @@ async function launchOpencode(emit: Emit) {
   client = createOpencodeClient({ baseUrl, headers: { Authorization: auth } })
   const { stream } = await client.v2.event.subscribe()
   void (async () => {
-    for await (const event of stream) emit(event)
+    for await (const event of stream) {
+      // /api/event mélange toutes les sessions d'opencode : on ne garde que la nôtre.
+      const e = event as { data?: { sessionID?: string }; properties?: { sessionID?: string } }
+      const sid = e.data?.sessionID ?? e.properties?.sessionID
+      if (sid && sessionId && sid !== sessionId) continue
+      emit(event)
+    }
   })().catch((err) => emit({ type: 'gui.error', properties: { message: String(err) } }))
 }
 
