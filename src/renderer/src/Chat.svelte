@@ -138,6 +138,10 @@
   const md = (t = '') => DOMPurify.sanitize(marked.parse(t, { async: false, breaks: true }))
   const dot: Record<string, string> = { completed: 'bg-green-500', error: 'bg-red-500', running: 'bg-amber-400 animate-pulse' }
 
+  // /prompt ne répond qu'à la fin de l'exécution : un chat fermé entre-temps ne doit plus changer de fil.
+  let alive = true
+  $effect(() => () => (alive = false))
+
   async function send() {
     const text = input.trim()
     if (!text || busy) return
@@ -148,7 +152,8 @@
     upsert(id, { id: id + ':text', messageID: id, type: 'text', text })
     error = ''
     try {
-      sid = await window.oc.send(text, sid, models.find((x) => key(x) === pick))
+      const got = await window.oc.send(text, sid, models.find((x) => key(x) === pick))
+      if (alive) sid = got
       onchange()
     } catch (err) {
       error = String(err)

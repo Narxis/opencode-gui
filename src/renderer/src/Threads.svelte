@@ -147,15 +147,16 @@
             <button class="flex w-full gap-3 rounded-lg px-2 py-2 text-left hover:bg-line/40" onclick={() => onopen(s.id)}>
               <span class="mt-1">
                 {#if key === 'busy'}{@render spinner()}
-                {:else if key === 'wait'}<span class="block size-3.5 rounded-full border-2 border-amber-400"></span>
+                {:else if key === 'wait'}<svg class="size-3.5 text-amber-400" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="6" /><path d="M7 4v6" /></svg>
                 {:else if status[s.id] === 'done'}<span class="m-0.5 block size-2.5 rounded-full bg-blue-500" title="Prêt"></span>
                 {:else if status[s.id] === 'error'}<span class="m-0.5 block size-2.5 rounded-full bg-red-500" title="Échec"></span>
-                {:else}<span class="block size-3.5 rounded-full border-2 border-dashed border-muted"></span>{/if}
+                {:else if key === 'done'}<svg class="size-3.5 text-muted" viewBox="0 0 14 14"><circle cx="7" cy="7" r="7" fill="currentColor" /><path d="m4 7.2 2 2 4-4.2" fill="none" stroke="var(--bg)" stroke-width="1.6" /></svg>
+                {:else}<svg class="size-3.5 text-muted" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2.2"><circle cx="7" cy="7" r="6" /></svg>{/if}
               </span>
               <span class="min-w-0 flex-1">
                 <span class="flex gap-2">
                   <span class="min-w-0 flex-1 truncate">
-                    <span class="font-semibold">{s.title || 'Sans titre'}</span>
+                    <span class={key === 'done' ? 'text-muted' : 'font-semibold'}>{s.title || 'Sans titre'}</span>
                     {#if i?.last}<span class="text-muted"> — {line(i.last)}</span>{/if}
                   </span>
                   <span class="shrink-0 text-xs text-muted">{ago(s.time?.updated)}</span>
