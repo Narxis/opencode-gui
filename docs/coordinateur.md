@@ -25,7 +25,7 @@ Sources : types de `@opencode-ai/sdk` 1.19.4 (`dist/v2`), mémoire du projet (op
 
 1. **Routage des événements par fil.** Aujourd'hui `src/main/opencode.ts` jette tout ce qui n'est pas la session courante. Il faut tout garder, indexé par `sessionID`, et mettre à jour l'état de chaque carte, même hors écran.
 2. **État des fils.** Petit store JSON dans `userData` : `{ projet: dossier, chat: sessionID, fils: [{ id, parent, état, résultat }] }`. L'état « live » se recalcule depuis les événements ; seuls `parent` et « terminé » sont persistés.
-3. **Outil `start_thread`.** L'outil `task` d'opencode bloque le coordinateur, donc pas de fils en parallèle ni de réponse courte immédiate. Solution : l'app expose un petit **serveur MCP local** (stdio, `src/main/mcp.ts`, lancé par opencode avec le Node d'Electron et déclaré via `OPENCODE_CONFIG_CONTENT` au lancement) avec 3 outils (seul `start_thread` est fait) :
+3. **Outil `start_thread`.** L'outil `task` d'opencode bloque le coordinateur, donc pas de fils en parallèle ni de réponse courte immédiate. Solution : l'app expose un petit **serveur MCP local** (stdio, `src/main/mcp.ts`, lancé par opencode avec le Node d'Electron et déclaré via `OPENCODE_CONFIG_CONTENT` au lancement) avec 3 outils :
    - `start_thread(titre, consigne)` → crée la session (`POST /api/session {agent:"build"}`), envoie la consigne, enregistre le lien, renvoie l'id ;
    - `message_thread(id, texte)` ;
    - `list_threads()` → titres + états.
