@@ -8,7 +8,9 @@ type Emit = (event: unknown) => void
 
 let client: OpencodeClient | undefined
 let baseUrl = ''
-let ready: Promise<void> | undefined
+// Promesse du démarrage, créée tout de suite : un appel arrivé avant startOpencode attend aussi.
+let start!: (p: Promise<void>) => void
+const ready = new Promise<void>((r) => (start = r as (p: Promise<void>) => void))
 // Mot de passe passé à opencode via OPENCODE_SERVER_PASSWORD ; utilisateur fixe « opencode ».
 const password = randomBytes(24).toString('base64url')
 const auth = `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}`
@@ -50,9 +52,10 @@ async function waitReady(baseUrl: string, child: ChildProcess, log: () => string
 
 /** Lance `opencode serve` et relaie les événements vers le renderer. */
 export function startOpencode(emit: Emit): Promise<void> {
-  ready = launchOpencode(emit)
+  const p = launchOpencode(emit)
+  start(p)
   ready.catch((err) => console.error('[opencode]', err))
-  return ready
+  return p
 }
 
 async function launchOpencode(emit: Emit) {
@@ -89,21 +92,35 @@ async function launchOpencode(emit: Emit) {
   })().catch((err) => emit({ type: 'gui.error', properties: { message: String(err) } }))
 }
 
-export async function sendPrompt(text: string) {
+type ModelRef = { id: string; providerID: string }
+
+/** Envoie au fil `id` ; sans id, crée le fil principal (avec le modèle choisi). */
+export async function sendPrompt(text: string, id?: string, model?: ModelRef) {
   // Attend la fin du démarrage ; si celui-ci a échoué, on relaie sa vraie erreur.
   await ready
   if (!client) throw new Error('opencode non démarré')
   // Requêtes directes : le SDK 1.19 (dernier publié) ne colle pas à l'API d'opencode 2.2
   // (corps vide non envoyé pour la création, { prompt: { text } } au lieu de { text }).
-  if (!sessionId) {
+  if (!id) {
     const created = await post('/api/session', {})
-    sessionId = created?.data?.id
-    if (!sessionId) throw new Error(`création de session impossible : ${JSON.stringify(created)}`)
+    id = sessionId = created?.data?.id
+    if (!id) throw new Error(`création de session impossible : ${JSON.stringify(created)}`)
+    if (model) await setModel(id, model)
   }
-  // Le fil peut changer pendant l'exécution (openSession) : on garde celui de l'envoi.
-  const id = sessionId
   await post(`/api/session/${id}/prompt`, { text })
   return id
+}
+
+/** Modèles proposés et modèle par défaut. */
+export async function models() {
+  await ready
+  const [list, def] = await Promise.all([api('/api/model'), api('/api/model/default')])
+  return { list: list.data, def: def.data }
+}
+
+export async function setModel(id: string, model: ModelRef) {
+  await ready
+  await post(`/api/session/${id}/model`, { model: { id: model.id, providerID: model.providerID } })
 }
 
 /** Fils (sessions) d'opencode, plus récents d'abord. */
@@ -140,7 +157,7 @@ async function api(path: string, method = 'GET', body?: unknown) {
     body: body ? JSON.stringify(body) : undefined
   })
   if (!res.ok) throw new Error(`${path} → ${res.status} ${await res.text()}`)
-  return res.json()
+  return res.status === 204 ? undefined : res.json()
 }
 
 export function stopOpencode() {
