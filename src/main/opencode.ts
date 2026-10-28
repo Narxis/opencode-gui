@@ -3,6 +3,7 @@ import type { OpencodeClient } from '@opencode-ai/sdk/v2'
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
 import { randomBytes } from 'node:crypto'
+import { join } from 'node:path'
 
 type Emit = (event: unknown) => void
 
@@ -27,6 +28,34 @@ function freePort(): Promise<number> {
     })
   })
 }
+
+/** Config ajoutée à celle de l'utilisateur : serveur MCP `threads` (outil start_thread), lancé avec le Node d'Electron. */
+const config = (port: number) =>
+  JSON.stringify({
+    mcp: {
+      threads: {
+        type: 'local',
+        command: [process.execPath, join(import.meta.dirname, 'mcp.js')],
+        environment: { ELECTRON_RUN_AS_NODE: '1', OC_URL: `http://127.0.0.1:${port}`, OC_AUTH: auth }
+      }
+    },
+    // Agent des chats créés par l'app : délègue aux fils, ne fait rien lui-même (outils de fichier, shell et sous-agent bloquant retirés).
+    // Format de config « legacy » (prompt, permission) : les clés system/permissions de l'API finiraient dans le corps de la requête au modèle.
+    agent: {
+      coordinateur: {
+        mode: 'primary',
+        description: 'Chat de projet : délègue le travail à des fils en parallèle.',
+        prompt: [
+          "Tu es le coordinateur d'un projet (le dossier courant). Tu réponds en français, en 3 phrases au plus.",
+          "Tu ne fais jamais le travail toi-même, même une tâche très courte : pour toute tâche (code, recherche, fichiers, traduction, calcul), lance un fil avec start_thread et une consigne complète et autonome, puis réponds tout de suite sans attendre.",
+          'Une tâche indépendante = un fil ; 3 fils en cours au maximum. Pour préciser ou corriger un fil, message_thread ; pour faire le point, list_threads.',
+          "Un message « [fil …] » signale qu'un fil a fini, attend ou a échoué : résume-le en une phrase et enchaîne (nouveau fil, message au fil ou question à l'utilisateur).",
+          "Tu n'as pas d'outil de fichier ni de shell : ce sont les fils qui lisent, cherchent et modifient."
+        ].join('\n'),
+        permission: Object.fromEntries(['read', 'glob', 'grep', 'edit', 'bash', 'task', 'webfetch', 'websearch', 'skill'].map((t) => [t, 'deny']))
+      }
+    }
+  })
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -66,7 +95,7 @@ async function launchOpencode(emit: Emit) {
   proc = spawn('opencode', ['serve', '--hostname=127.0.0.1', `--port=${port}`], {
     shell: true,
     windowsHide: true,
-    env: { ...process.env, OPENCODE_SERVER_PASSWORD: password }
+    env: { ...process.env, OPENCODE_SERVER_PASSWORD: password, OPENCODE_CONFIG_CONTENT: config(port) }
   })
   const onData = (d: Buffer) => (output = (output + d).slice(-2000))
   proc.stdout?.on('data', onData)
@@ -87,9 +116,32 @@ async function launchOpencode(emit: Emit) {
       // /api/event mélange toutes les sessions : celles des autres fils servent seulement à leur état.
       const e = event as { data?: { sessionID?: string }; properties?: { sessionID?: string } }
       const sid = e.data?.sessionID ?? e.properties?.sessionID
+      if (sid) report(sid, (event as { type: string }).type).catch((err) => console.error('[fil]', err))
       emit(sid && sid !== sessionId ? { ...event, other: true } : event)
     }
   })().catch((err) => emit({ type: 'gui.error', properties: { message: String(err) } }))
+}
+
+const ends: Record<string, string> = {
+  'session.execution.succeeded': 'prêt',
+  'session.execution.failed': 'échec',
+  'permission.asked': "attend l'utilisateur",
+  'permission.v2.asked': "attend l'utilisateur",
+  'question.asked': "attend l'utilisateur",
+  'question.v2.asked': "attend l'utilisateur"
+}
+
+/** Fin ou blocage d'un fil lancé par start_thread : prévient le chat qui l'a lancé (mis en file s'il est occupé). */
+async function report(id: string, type: string) {
+  if (!ends[type]) return
+  const { data: s } = await api(`/api/session/${id}`)
+  const parent = s?.metadata?.thread && s.metadata.parent
+  if (!parent) return
+  const { data: msgs } = await api(`/api/session/${id}/message?order=desc&limit=10`)
+  const text = (msgs as any[]).find((m) => m.type === 'assistant' && m.content?.some((c: any) => c.type === 'text'))
+    ?.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n') ?? ''
+  const summary = text.length > 600 ? text.slice(0, 600) + '…' : text
+  await post(`/api/session/${parent}/prompt`, { text: `[fil « ${s.title} » (${id})] ${ends[type]}${summary ? ` : ${summary}` : ''}` })
 }
 
 type ModelRef = { id: string; providerID: string }
@@ -101,14 +153,25 @@ export async function sendPrompt(text: string, id?: string, model?: ModelRef) {
   if (!client) throw new Error('opencode non démarré')
   // Requêtes directes : le SDK 1.19 (dernier publié) ne colle pas à l'API d'opencode 2.2
   // (corps vide non envoyé pour la création, { prompt: { text } } au lieu de { text }).
+  await (mcpReady ??= mcpWait())
   if (!id) {
-    const created = await post('/api/session', {})
+    const created = await post('/api/session', { agent: 'coordinateur' })
     id = sessionId = created?.data?.id
     if (!id) throw new Error(`création de session impossible : ${JSON.stringify(created)}`)
     if (model) await setModel(id, model)
   }
   await post(`/api/session/${id}/prompt`, { text })
   return id
+}
+
+let mcpReady: Promise<void> | undefined
+/** Attend (5 s max) que le serveur MCP `threads` soit connecté : sinon le 1er message ne voit pas start_thread. */
+async function mcpWait() {
+  for (let i = 0; i < 20; i++) {
+    const { data } = await api('/api/mcp')
+    if (data?.some((m: any) => m.name === 'threads' && m.status?.status !== 'pending')) return
+    await sleep(250)
+  }
 }
 
 /** Modèles proposés et modèle par défaut. */
