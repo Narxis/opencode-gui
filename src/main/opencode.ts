@@ -100,8 +100,10 @@ export async function sendPrompt(text: string) {
     sessionId = created?.data?.id
     if (!sessionId) throw new Error(`création de session impossible : ${JSON.stringify(created)}`)
   }
-  await post(`/api/session/${sessionId}/prompt`, { text })
-  return sessionId
+  // Le fil peut changer pendant l'exécution (openSession) : on garde celui de l'envoi.
+  const id = sessionId
+  await post(`/api/session/${id}/prompt`, { text })
+  return id
 }
 
 /** Fils (sessions) d'opencode, plus récents d'abord. */

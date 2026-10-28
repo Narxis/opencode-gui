@@ -79,7 +79,7 @@
     if (/^(permission|question)(\.v2)?\.asked$/.test(kind)) next = 'wait'
     else if (/^(session\.execution\.failed|session\.error)$/.test(kind)) next = 'error'
     else if (/^(idle|session\.idle|session\.execution\.succeeded)$/.test(kind)) next = status[sid] === 'busy' && sid !== current ? 'done' : status[sid] === 'busy' ? '' : undefined
-    else if (/^(busy|retry|session\.(step|text|tool)\.|(permission|question)(\.v2)?\.(replied|rejected))/.test(kind)) next = 'busy'
+    else if (/^(busy|retry|session\.execution\.started|session\.(step|text|tool)\.|(permission|question)(\.v2)?\.(replied|rejected))/.test(kind)) next = 'busy'
     if (next === undefined || status[sid] === next) return
     if (next) status[sid] = next
     else delete status[sid]
@@ -181,7 +181,10 @@
     upsert(id, { id: id + ':text', messageID: id, type: 'text', text })
     error = ''
     try {
-      current = await window.oc.send(text)
+      // /prompt ne répond qu'à la fin de l'exécution : ne pas ramener l'utilisateur s'il a changé de fil.
+      const before = current
+      const sid = await window.oc.send(text)
+      if (current === before) current = sid
       refresh()
     } catch (err) {
       error = String(err)
