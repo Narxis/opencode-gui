@@ -1,6 +1,7 @@
 <script lang="ts">
   import Threads from './Threads.svelte'
   import Chat from './Chat.svelte'
+  import { themes, saved, apply } from './theme'
 
   let error = $state('')
   let sessions = $state<any[]>([])
@@ -78,7 +79,7 @@
   {#snippet icon(d: string)}<svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path {d} /></svg>{/snippet}
   {#snippet toggle()}<button class="rounded-lg p-1.5 text-muted hover:bg-line/40 hover:text-fg" aria-label="Barre latérale" onclick={() => (side = !side)}>{@render icon('M3 5h18v14H3zM9 5v14')}</button>{/snippet}
   {#if side}
-  <aside class="flex w-64 shrink-0 flex-col overflow-y-auto border-r border-line bg-bg px-2 pb-3 pt-2 text-sm">
+  <aside class="flex w-64 shrink-0 flex-col overflow-y-auto border-r border-line bg-side px-2 pb-3 pt-2 text-sm">
     <div class="px-1 pb-2">{@render toggle()}</div>
     <button class="flex items-center gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-line/40" onclick={() => open()}>{@render icon('M12 5v14M5 12h14')}Créer</button>
     {#if query === undefined}
@@ -102,6 +103,11 @@
         {/if}
       </div>
     {/each}
+    <label class="mt-auto flex items-center gap-2 px-2 pt-4 text-xs text-muted">Apparence
+      <select class="min-w-0 flex-1 rounded-md border border-line bg-input px-1 py-0.5 text-fg outline-none" value={saved()} onchange={(e) => apply(e.currentTarget.value)}>
+        {#each Object.entries(themes) as [k, v] (k)}<option value={k}>{v}</option>{/each}
+      </select>
+    </label>
   </aside>
   {/if}
   <section class="relative flex min-w-0 flex-1 flex-col">

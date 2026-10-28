@@ -1,16 +1,24 @@
 @import 'tailwindcss';
 
-:root {
-  --bg: #faf9f5; --panel: #f0eee6; --line: #e3e0d6; --fg: #1f1e1c; --muted: #6f6c64; --accent: #c96442;
+/* Apparences : choisies dans la barre latérale (theme.ts pose data-theme sur <html>). */
+:root, [data-theme='claude-light'] {
+  --bg: #faf9f5; --side: #f5f4ed; --panel: #f0eee6; --input: #ffffff; --line: #e5e3da;
+  --fg: #141413; --muted: #73726c; --accent: #c6613f;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1f1e1c; --panel: #2a2926; --line: #3a3934; --fg: #ece9e1; --muted: #9c988e; --accent: #d97757;
-    color-scheme: dark;
-  }
+[data-theme='claude-dark'] {
+  --bg: #262624; --side: #1f1e1d; --panel: #141413; --input: #30302e; --line: #3e3e38;
+  --fg: #faf9f5; --muted: #9c9a92; --accent: #d97757; color-scheme: dark;
+}
+[data-theme='oled'] {
+  --bg: #000000; --side: #000000; --panel: #141414; --input: #0d0d0d; --line: #262626;
+  --fg: #ededed; --muted: #8a8a8a; --accent: #d97757; color-scheme: dark;
+}
+[data-theme='nord'] {
+  --bg: #2e3440; --side: #292e39; --panel: #3b4252; --input: #3b4252; --line: #434c5e;
+  --fg: #eceff4; --muted: #9aa3b5; --accent: #88c0d0; color-scheme: dark;
 }
 @theme inline {
-  --color-bg: var(--bg); --color-panel: var(--panel); --color-line: var(--line);
+  --color-bg: var(--bg); --color-side: var(--side); --color-panel: var(--panel); --color-input: var(--input); --color-line: var(--line);
   --color-fg: var(--fg); --color-muted: var(--muted); --color-accent: var(--accent);
   --font-sans: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Cascadia Code', Consolas, ui-monospace, monospace;
