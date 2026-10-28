@@ -191,12 +191,12 @@
     {#if error}<p class="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-500">{error}</p>{/if}
   </div>
 </div>
-<form class="mx-auto mb-4 flex w-[calc(100%-2rem)] max-w-3xl flex-col gap-1 rounded-2xl border border-line bg-panel p-2 shadow-sm focus-within:border-muted" onsubmit={(e) => { e.preventDefault(); send() }}>
+<form class="mx-auto mb-4 flex w-[calc(100%-2rem)] max-w-3xl flex-col gap-1 rounded-2xl border border-line bg-input p-2 shadow-sm focus-within:border-muted" onsubmit={(e) => { e.preventDefault(); send() }}>
   <textarea rows="1" class="field-sizing-content max-h-60 resize-none bg-transparent px-2 py-1.5 outline-none placeholder:text-muted" placeholder="Écris à opencode…  (Maj+Entrée = nouvelle ligne)" bind:value={input} onkeydown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}></textarea>
   <div class="flex items-center gap-2">
     {#if models.length}
       <select class="ml-auto max-w-48 truncate rounded-lg bg-transparent px-2 py-1 text-sm text-muted outline-none hover:bg-line/40 hover:text-fg" aria-label="Modèle" bind:value={pick} onchange={choose}>
-        {#each models as m (key(m))}<option class="bg-panel text-fg" value={key(m)}>{m.name}</option>{/each}
+        {#each models as m (key(m))}<option class="bg-input text-fg" value={key(m)}>{m.name}</option>{/each}
       </select>
     {/if}
     <button class="{models.length ? '' : 'ml-auto'} size-9 rounded-xl bg-accent text-lg text-white disabled:opacity-40" disabled={busy || !input.trim()} aria-label="Envoyer">↑</button>
