@@ -3,6 +3,7 @@ import type { OpencodeClient } from '@opencode-ai/sdk/v2'
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { createServer } from 'node:net'
 import { randomBytes } from 'node:crypto'
+import { join } from 'node:path'
 
 type Emit = (event: unknown) => void
 
@@ -27,6 +28,18 @@ function freePort(): Promise<number> {
     })
   })
 }
+
+/** Config ajoutée à celle de l'utilisateur : serveur MCP `threads` (outil start_thread), lancé avec le Node d'Electron. */
+const config = (port: number) =>
+  JSON.stringify({
+    mcp: {
+      threads: {
+        type: 'local',
+        command: [process.execPath, join(import.meta.dirname, 'mcp.js')],
+        environment: { ELECTRON_RUN_AS_NODE: '1', OC_URL: `http://127.0.0.1:${port}`, OC_AUTH: auth }
+      }
+    }
+  })
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -66,7 +79,7 @@ async function launchOpencode(emit: Emit) {
   proc = spawn('opencode', ['serve', '--hostname=127.0.0.1', `--port=${port}`], {
     shell: true,
     windowsHide: true,
-    env: { ...process.env, OPENCODE_SERVER_PASSWORD: password }
+    env: { ...process.env, OPENCODE_SERVER_PASSWORD: password, OPENCODE_CONFIG_CONTENT: config(port) }
   })
   const onData = (d: Buffer) => (output = (output + d).slice(-2000))
   proc.stdout?.on('data', onData)
@@ -101,6 +114,7 @@ export async function sendPrompt(text: string, id?: string, model?: ModelRef) {
   if (!client) throw new Error('opencode non démarré')
   // Requêtes directes : le SDK 1.19 (dernier publié) ne colle pas à l'API d'opencode 2.2
   // (corps vide non envoyé pour la création, { prompt: { text } } au lieu de { text }).
+  await (mcpReady ??= mcpWait())
   if (!id) {
     const created = await post('/api/session', {})
     id = sessionId = created?.data?.id
@@ -109,6 +123,16 @@ export async function sendPrompt(text: string, id?: string, model?: ModelRef) {
   }
   await post(`/api/session/${id}/prompt`, { text })
   return id
+}
+
+let mcpReady: Promise<void> | undefined
+/** Attend (5 s max) que le serveur MCP `threads` soit connecté : sinon le 1er message ne voit pas start_thread. */
+async function mcpWait() {
+  for (let i = 0; i < 20; i++) {
+    const { data } = await api('/api/mcp')
+    if (data?.some((m: any) => m.name === 'threads' && m.status?.status !== 'pending')) return
+    await sleep(250)
+  }
 }
 
 /** Modèles proposés et modèle par défaut. */
